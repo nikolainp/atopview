@@ -11,6 +11,7 @@ import (
 	"github.com/nikolainp/atopview/config"
 	"github.com/nikolainp/atopview/logparser"
 	"github.com/nikolainp/atopview/logreader"
+	"github.com/nikolainp/atopview/monitor"
 	"github.com/nikolainp/atopview/storage"
 )
 
@@ -41,9 +42,13 @@ func main() {
 			return
 		}
 
+		monitor := monitor.NewMonitor()
+		monitor.Start(ctx, "")
+
 		dataTrasfer := make(chan []byte)
 		wg.Go(func() {
 			worker := logparser.NewLogParser()
+			worker.WithMonitor(monitor)
 			worker.ReadData(ctx, dataTrasfer)
 		})
 		wg.Go(func() {
@@ -58,6 +63,7 @@ func main() {
 
 		wg.Wait()
 		// monitor.Start("Save data: parts: %[1]d/%[2]d time: %[5]s")
+		monitor.Stop()
 		storage.FlushAll(conf.PathStorage)
 	} else {
 		if storage, err = getOldStorage(conf.PathStorage); err != nil {

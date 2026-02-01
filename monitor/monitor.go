@@ -1,104 +1,105 @@
 package monitor
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sync"
 	"time"
 )
 
-type CancelFunc func() bool
+// Monitor ...
+type Monitor interface {
+	Start(context.Context, string)
+	Stop()
+	WriteEvent(frmt string, args ...any)
+	DiscoveredData(mark string, count int, size int64)
+	ProcessedData(mark string, count int, size int64)
+}
 
-type Monitor struct {
-	partsTotal    int
-	partsFinished int
-	sizeTotal     int64
-	sizeFinished  int64
-	messageBuffer []string
+///////////////////////////////////////////////////////////////////////////////
+
+type monitor struct {
+	markStart, markDone   string
+	partsTotal, partsDone int
+	sizeTotal, sizeDone   int64
+	messageBuffer         []string
 
 	fmtShowProgress string
 
 	startTime time.Time
 	ticker    *time.Ticker
-	done      chan bool
+	done      chan struct{}
 
-	mu         sync.Mutex
-	wg         sync.WaitGroup
-	cancelChan chan bool
+	mu  sync.Mutex
+	wg  sync.WaitGroup
+	ctx context.Context
 }
 
-func New(isCancelChan chan bool) *Monitor {
-	obj := new(Monitor)
-	obj.done = make(chan bool)
-
-	obj.cancelChan = isCancelChan
+// NewMonitor ...
+func NewMonitor() Monitor {
+	obj := new(monitor)
 
 	return obj
-	//return &monitor{startTime: time.Now()}
 }
 
-func (obj *Monitor) WriteEvent(frmt string, args ...any) {
-	defer obj.mu.Unlock()
-	obj.mu.Lock()
+///////////////////////////////////////////////////////////////////////////////
 
-	obj.messageBuffer = append(obj.messageBuffer, fmt.Sprintf(frmt, args...))
-}
-
-func (obj *Monitor) NewData(count int, size int64) {
-	defer obj.mu.Unlock()
-	obj.mu.Lock()
-
-	obj.partsTotal += count
-	obj.sizeTotal += size
-}
-
-func (obj *Monitor) ProcessedData(count int, size int64) {
-	defer obj.mu.Unlock()
-	obj.mu.Lock()
-
-	obj.partsFinished += count
-	obj.sizeFinished += size
-}
-
-func (obj *Monitor) Start(showProgress string) {
+// Start ...
+func (obj *monitor) Start(ctx context.Context, fmtShowProgress string) {
 	obj.Stop()
 
-	obj.partsTotal = 0
-	obj.partsFinished = 0
-	obj.sizeTotal = 0
-	obj.sizeFinished = 0
-	obj.fmtShowProgress = showProgress + "          \r"
+	obj.ctx = ctx
+	obj.done = make(chan struct{})
+
+	obj.markStart, obj.markDone = "", ""
+	obj.partsTotal, obj.partsDone = 0, 0
+	obj.sizeTotal, obj.sizeDone = 0, 0
+	obj.fmtShowProgress = fmtShowProgress + "          \r"
 
 	obj.print()
 }
 
-func (obj *Monitor) Stop() {
+// Stop ...
+func (obj *monitor) Stop() {
 	if obj.ticker == nil {
 		return
 	}
 
 	defer obj.ticker.Stop()
 
-	obj.done <- true
+	close(obj.done)
 	obj.wg.Wait()
 }
 
-func (obj *Monitor) IsCancel() bool {
-	select {
-	case _, ok := <-obj.cancelChan:
-		return !ok
-	default:
-		return false
-	}
+func (obj *monitor) WriteEvent(frmt string, args ...any) {
+	defer obj.mu.Unlock()
+	obj.mu.Lock()
+
+	obj.messageBuffer = append(obj.messageBuffer, fmt.Sprintf(frmt, args...))
 }
 
-func (obj *Monitor) Cancel() chan bool {
-	return obj.cancelChan
+func (obj *monitor) DiscoveredData(mark string, count int, size int64) {
+	defer obj.mu.Unlock()
+	obj.mu.Lock()
+
+	obj.markStart = mark
+	obj.partsTotal += count
+	obj.sizeTotal += size
+}
+
+func (obj *monitor) ProcessedData(mark string, count int, size int64) {
+	defer obj.mu.Unlock()
+	obj.mu.Lock()
+
+	obj.markDone = mark
+	obj.partsDone += count
+	obj.sizeDone += size
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-func (obj *Monitor) print() {
+func (obj *monitor) print() {
 	var prevFinishedSize int64
 	var prevDuration time.Duration
 
@@ -113,18 +114,18 @@ func (obj *Monitor) print() {
 		var totalSpeed int64
 
 		totalDuration := time.Since(obj.startTime)
-		totalSpeed = 1000 * obj.sizeFinished / totalDuration.Milliseconds()
+		totalSpeed = 1000 * obj.sizeDone / totalDuration.Milliseconds()
 
 		deltaDuration := totalDuration - prevDuration
 		if deltaDuration.Milliseconds() > 0 {
-			speed = 1000 * (obj.sizeFinished - prevFinishedSize) / deltaDuration.Milliseconds()
+			speed = 1000 * (obj.sizeDone - prevFinishedSize) / deltaDuration.Milliseconds()
 			if deltaDuration.Seconds() < 1 {
 				speed = 1000 * speed / deltaDuration.Milliseconds()
 			}
 		}
 		if deltaDuration.Seconds() > 1 {
 			prevDuration = totalDuration
-			prevFinishedSize = obj.sizeFinished
+			prevFinishedSize = obj.sizeDone
 		}
 
 		for i := range obj.messageBuffer {
@@ -135,37 +136,28 @@ func (obj *Monitor) print() {
 		//"files: %d/%d size: %s/%s time: %s [speed %s/s/%s/s ]                           \r",
 		fmt.Fprintf(os.Stderr,
 			obj.fmtShowProgress,
-			obj.partsFinished, obj.partsTotal,
-			byteCount(obj.sizeFinished), byteCount(obj.sizeTotal),
+			obj.partsDone, obj.partsTotal,
+			byteCount(obj.sizeDone), byteCount(obj.sizeTotal),
 			totalDuration.Truncate(time.Second),
 			byteCount(speed), byteCount(totalSpeed))
 	}
 
-	obj.wg.Add(1)
-	go func() {
-		defer obj.wg.Done()
-
-		for {
-			var done, cancel bool
-
+	obj.wg.Go(func() {
+		for isBreak := false; !isBreak; {
 			select {
-			case done = <-obj.done:
-
-			case _, ok := <-obj.cancelChan:
-				cancel = !ok
+			case <-obj.done:
+				isBreak = true
+			case <-obj.ctx.Done():
+				isBreak = true
 
 			case <-obj.ticker.C:
 				doPrint()
-			}
-
-			if done || cancel {
-				break
 			}
 		}
 
 		doPrint()
 		fmt.Fprintf(os.Stderr, "\n")
-	}()
+	})
 
 	// TODO: + total bytesnv time spend [ speed ] [ in work %d - finished %d ]
 }
