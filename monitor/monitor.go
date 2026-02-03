@@ -138,6 +138,7 @@ func (obj *monitor) print() {
 			obj.fmtShowProgress,
 			obj.partsDone, obj.partsTotal,
 			byteCount(obj.sizeDone), byteCount(obj.sizeTotal),
+			obj.markDone, obj.markStart,
 			totalDuration.Truncate(time.Second),
 			byteCount(speed), byteCount(totalSpeed))
 	}

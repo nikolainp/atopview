@@ -43,7 +43,7 @@ func main() {
 		}
 
 		monitor := monitor.NewMonitor()
-		monitor.Start(ctx, "")
+		monitor.Start(ctx, "Parse: %[6]s - %[5]s time: %[7]s")
 
 		dataTrasfer := make(chan []byte)
 		wg.Go(func() {

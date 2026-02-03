@@ -165,7 +165,7 @@ func (obj *logReader) doWrite(ctx context.Context, out chan<- []byte) {
 				if i == 0 && isExistsLastLine {
 					lastLine = append(lastLine, bufSlice[i]...)
 					if len(bufSlice) > 1 {
-						out <- lastLine
+						writeToChan(out, lastLine)
 						isExistsLastLine = false
 					}
 					continue
@@ -182,7 +182,7 @@ func (obj *logReader) doWrite(ctx context.Context, out chan<- []byte) {
 					continue
 				}
 
-				out <- bufSlice[i]
+				writeToChan(out, bufSlice[i])
 			}
 		}
 	}
@@ -196,7 +196,7 @@ func (obj *logReader) doWrite(ctx context.Context, out chan<- []byte) {
 				obj.poolBuf.Put(buffer.buf)
 			} else {
 				if isExistsLastLine {
-					out <- lastLine
+					writeToChan(out, lastLine)
 				}
 				isBreak = true
 			}
@@ -207,6 +207,8 @@ func (obj *logReader) doWrite(ctx context.Context, out chan<- []byte) {
 	}
 
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 func readAllStream(data io.Reader) (string, error) {
 	buf := make([]byte, 1024)
@@ -224,4 +226,11 @@ func readAllStream(data io.Reader) (string, error) {
 	}
 
 	return totalBuf.String(), nil
+}
+
+func writeToChan(out chan<- []byte, buf []byte) {
+
+	bufCopy := make([]byte, len(buf))
+	copy(bufCopy, buf)
+	out <- bufCopy
 }
