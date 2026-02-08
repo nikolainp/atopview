@@ -11,7 +11,25 @@ import (
 
 // LogReader ...
 type LogReader interface {
+	WithMonitor(Monitor)
 	ReadData(context.Context, chan<- []byte) (string, error)
+}
+
+// DataTransfer ...
+type DataTransfer interface {
+	Close()
+	GetBuffer() *[]byte
+	Send(b *[]byte, n int)
+	Receive() <-chan struct {
+		buf *[]byte
+		len int
+	}
+	Free(b *[]byte)
+}
+
+// Monitor ...
+type Monitor interface {
+	WriteEvent(frmt string, args ...any)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -23,10 +41,10 @@ type logReader struct {
 	err    error
 	stderr io.ReadCloser
 
-	bufSize int
-	command *exec.Cmd
-	poolBuf sync.Pool
-	chBuf   chan streamBuffer
+	bufSize  int
+	command  *exec.Cmd
+	transfer DataTransfer
+	monitor  Monitor
 }
 
 // NewLogReader ...
@@ -38,15 +56,14 @@ func NewLogReader(utility, log string) LogReader {
 
 	obj.bufSize = 1024 * 1024 * 1
 
-	obj.poolBuf = sync.Pool{New: func() interface{} {
-		lines := make([]byte, obj.bufSize)
-		return &lines
-	}}
-
 	return obj
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+func (obj *logReader) WithMonitor(monitor Monitor) {
+	obj.monitor = monitor
+}
 
 func (obj *logReader) ReadData(ctx context.Context, out chan<- []byte) (errText string, err error) {
 	var data io.Reader
@@ -56,7 +73,7 @@ func (obj *logReader) ReadData(ctx context.Context, out chan<- []byte) (errText 
 	}
 
 	var wg sync.WaitGroup
-	obj.chBuf = make(chan streamBuffer, 1)
+	obj.transfer = NewDataTransfer(obj.bufSize)
 
 	wg.Go(func() { obj.doRead(ctx, data) })
 	wg.Go(func() { obj.doWrite(ctx, out) })
@@ -73,6 +90,7 @@ func (obj *logReader) ReadData(ctx context.Context, out chan<- []byte) (errText 
 ///////////////////////////////////////////////////////////////////////////////
 
 func (obj *logReader) openLogFile() (data io.Reader, err error) {
+	obj.monitor.WriteEvent("Exec: %s -PALL -r %s\n", obj.pathUtility, obj.pathLog)
 	obj.command = exec.Command(obj.pathUtility, "-PALL", "-r", obj.pathLog)
 
 	if data, err = obj.command.StdoutPipe(); err != nil {
@@ -109,6 +127,49 @@ type streamBuffer struct {
 	len int
 }
 
+type dataTransfer struct {
+	ch chan struct {
+		buf *[]byte
+		len int
+	}
+	pool sync.Pool
+}
+
+// NewDataTransfer ...
+func NewDataTransfer(size int) DataTransfer {
+	obj := new(dataTransfer)
+	obj.ch = make(chan struct {
+		buf *[]byte
+		len int
+	})
+	obj.pool = sync.Pool{New: func() interface{} {
+		buf := make([]byte, size)
+		return &buf
+	}}
+	return obj
+}
+func (obj *dataTransfer) Close() {
+	close(obj.ch)
+}
+
+func (obj *dataTransfer) GetBuffer() *[]byte {
+	return obj.pool.Get().(*[]byte)
+}
+func (obj *dataTransfer) Send(b *[]byte, n int) {
+	obj.ch <- streamBuffer{b, n}
+}
+func (obj *dataTransfer) Receive() <-chan struct {
+	buf *[]byte
+	len int
+} {
+	return obj.ch
+}
+func (obj *dataTransfer) Free(b *[]byte) {
+	obj.pool.Put(b)
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 func (obj *logReader) doRead(ctx context.Context, sIn io.Reader) {
 
 	reader := bufio.NewReaderSize(sIn, obj.bufSize)
@@ -128,22 +189,23 @@ func (obj *logReader) doRead(ctx context.Context, sIn io.Reader) {
 	}
 
 	for isBreak := false; !isBreak; {
-		buf := obj.poolBuf.Get().(*[]byte)
+		buf := obj.transfer.GetBuffer()
 		n, err := readBuffer(*buf)
 		if n == 0 || err != nil {
 			obj.err = err
 			break
 		} else {
+
 			select {
-			case obj.chBuf <- streamBuffer{buf, n}:
-				break
 			case <-ctx.Done():
 				isBreak = true
+			default:
+				obj.transfer.Send(buf, n)
 			}
 		}
 	}
 
-	close(obj.chBuf)
+	obj.transfer.Close()
 }
 
 func (obj *logReader) doWrite(ctx context.Context, out chan<- []byte) {
@@ -189,11 +251,11 @@ func (obj *logReader) doWrite(ctx context.Context, out chan<- []byte) {
 
 	for isBreak := false; !isBreak; {
 		select {
-		case buffer, ok := <-obj.chBuf:
+		case buffer, ok := <-obj.transfer.Receive():
 			if ok {
 				writeBuffer(*(buffer.buf), buffer.len)
 
-				obj.poolBuf.Put(buffer.buf)
+				obj.transfer.Free(buffer.buf)
 			} else {
 				if isExistsLastLine {
 					writeToChan(out, lastLine)
