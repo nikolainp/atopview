@@ -44,22 +44,22 @@ func main() {
 
 		monitor := monitor.NewMonitor()
 		monitor.Start(ctx, "Parse: %[6]s - %[5]s time: %[7]s")
+		transfer := logreader.NewDataTransfer(1024)
 
-		dataTrasfer := make(chan []byte)
 		wg.Go(func() {
 			worker := logparser.NewLogParser()
 			worker.WithMonitor(monitor)
-			worker.ReadData(ctx, dataTrasfer)
+			worker.ReadData(ctx, transfer)
 		})
 		wg.Go(func() {
 			worker := logreader.NewLogReader(conf.PathUtilinty, conf.PathLog)
 			worker.WithMonitor(monitor)
-			if errText, err := worker.ReadData(ctx, dataTrasfer); err != nil {
+			if errText, err := worker.ReadData(ctx, transfer); err != nil {
 				fmt.Fprintf(os.Stderr, "atop error: %v\n", err)
 				fmt.Fprintf(os.Stderr, "%s", errText)
 				cancel()
 			}
-			close(dataTrasfer)
+			transfer.Close()
 		})
 
 		wg.Wait()

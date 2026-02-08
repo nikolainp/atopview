@@ -11,7 +11,13 @@ import (
 // LogParser ...
 type LogParser interface {
 	WithMonitor(Monitor)
-	ReadData(context.Context, <-chan []byte) error
+	ReadData(context.Context, DataTransfer) error
+}
+
+// DataTransfer ...
+type DataTransfer interface {
+	Receive(context.Context) (b *[]byte, n int, ok bool)
+	Free(b *[]byte)
 }
 
 // Monitor ...
@@ -39,19 +45,24 @@ func (obj *logParser) WithMonitor(monitor Monitor) {
 	obj.monitor = monitor
 }
 
-func (obj *logParser) ReadData(ctx context.Context, in <-chan []byte) error {
+func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 
 	isFirstLine := true
 
-	readRecord := func(buf []byte) {
-		data, err := newEntry(buf)
+	readRecord := func(buf []byte, n int) {
+		data, err := newEntry(buf[:n])
 		if err != nil {
 			obj.monitor.WriteEvent("Error: %v\n%s\n", err, string(buf))
 			return
 		}
 
+		if data.label == labelNONE || data.label == labelRESET || data.label == labelSEP {
+			return
+		}
+
 		if isFirstLine {
 			isFirstLine = false
+			obj.monitor.WriteEvent("Start time: %s\n", data.timeStamp.String())
 			obj.monitor.DiscoveredData(data.timeStamp.String(), 0, 0)
 		}
 		obj.monitor.ProcessedData(data.timeStamp.String(), 0, 0)
@@ -59,16 +70,13 @@ func (obj *logParser) ReadData(ctx context.Context, in <-chan []byte) error {
 	}
 
 	for isBreak := false; !isBreak; {
-		select {
-		case <-ctx.Done():
-			return nil
-		case buf, ok := <-in:
-			if ok {
-				// fmt.Println(string(buf))
-				readRecord(buf)
-			} else {
-				isBreak = true
-			}
+		buf, n, ok := in.Receive(ctx)
+		if !ok || n == 0 {
+			isBreak = true
+		} else {
+			// fmt.Println(string(buf))
+			readRecord(*buf, n)
+			in.Free(buf)
 		}
 	}
 
