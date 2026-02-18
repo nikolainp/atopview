@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" //sqlite3
 )
 
+// Storage ...
 type Storage struct {
 	metadata metaData
 
@@ -16,7 +17,7 @@ type Storage struct {
 	db *sql.DB
 }
 
-// Конструктор Storage
+// CreateCache - Storage contructor
 func CreateCache() (*Storage, error) {
 
 	var err error
@@ -26,11 +27,12 @@ func CreateCache() (*Storage, error) {
 		return nil, err
 	}
 
-	initDB(obj.db, obj.metadata, true)
+	initDB(obj.db, obj.metadata)
 
 	return obj, nil
 }
 
+// Open ...
 func Open(stroragePath string) (obj *Storage, err error) {
 
 	if _, err := os.Stat(stroragePath); err != nil {
@@ -45,6 +47,7 @@ func Open(stroragePath string) (obj *Storage, err error) {
 	return obj, nil
 }
 
+// FlushAll ...
 func (obj *Storage) FlushAll(stroragePath string) error {
 
 	if err := os.Remove(stroragePath); err != nil && !os.IsNotExist(err) {
@@ -55,7 +58,7 @@ func (obj *Storage) FlushAll(stroragePath string) error {
 	if err != nil {
 		return err
 	}
-	initDB(db, obj.metadata, false)
+	initDB(db, obj.metadata)
 	db.Close()
 
 	obj.saveAll(stroragePath)
@@ -64,6 +67,7 @@ func (obj *Storage) FlushAll(stroragePath string) error {
 
 }
 
+// WriteRow ...
 func (obj *Storage) WriteRow(table string, args ...any) {
 	query, ok := obj.cacheInsertValueSQL[table]
 	if !ok {
@@ -76,6 +80,7 @@ func (obj *Storage) WriteRow(table string, args ...any) {
 	}
 }
 
+// Update ...
 func (obj *Storage) Update(table string, args ...any) {
 
 	fields := make([]any, 0, len(args))
@@ -125,7 +130,7 @@ func (obj *Storage) Update(table string, args ...any) {
 
 func newStorage() *Storage {
 	obj := new(Storage)
-	obj.metadata = NewMetadata()
+	obj.metadata = newMetadata()
 	obj.cacheInsertValueSQL = make(map[string]string)
 
 	return obj
@@ -160,8 +165,8 @@ func openDB(stroragePath string) (*sql.DB, error) {
 	return db, nil
 }
 
-func initDB(db *sql.DB, meta metaData, isCache bool) {
-	for _, table := range meta.InitDB(isCache) {
+func initDB(db *sql.DB, meta metaData) {
+	for _, table := range meta.InitDB() {
 		if _, err := db.Exec(table); err != nil {
 			panic(err)
 		}

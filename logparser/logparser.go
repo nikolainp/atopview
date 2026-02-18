@@ -20,6 +20,23 @@ type DataTransfer interface {
 	Free(b *[]byte)
 }
 
+// Storage ...
+type Storage interface {
+	WriteRow(table string, args ...any)
+	Update(table string, args ...any)
+	//      SetIdByGroup(table string, column, group string)
+	SelectQuery(table string, columns ...string) interface {
+		SetTimeFilter(struct {
+			From time.Time
+			To   time.Time
+		})
+		SetFilter(filter ...string)
+		SetGroup(fields ...string)
+		SetOrder(fields ...string)
+		Next(args ...any) bool
+	}
+}
+
 // Monitor ...
 type Monitor interface {
 	WriteEvent(frmt string, args ...any)
@@ -30,12 +47,22 @@ type Monitor interface {
 ///////////////////////////////////////////////////////////////////////////////
 
 type logParser struct {
+	storage Storage
 	monitor Monitor
+
+	desc       map[entryLabel]dataDescription
+	counterID  map[string]int
+	computerID int
 }
 
 // NewLogParser ...
-func NewLogParser() LogParser {
+func NewLogParser(storage Storage) LogParser {
 	obj := new(logParser)
+	obj.storage = storage
+
+	obj.desc = getDataDescription()
+	obj.counterID = make(map[string]int, 100)
+
 	return obj
 }
 
@@ -49,15 +76,15 @@ func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 
 	isFirstLine := true
 
-	readRecord := func(buf []byte, n int) {
+	readRecord := func(buf []byte, n int) error {
 		data, err := newEntry(buf[:n])
 		if err != nil {
 			obj.monitor.WriteEvent("Error: %v\n%s\n", err, string(buf))
-			return
+			return err
 		}
 
 		if data.label == labelNONE || data.label == labelRESET || data.label == labelSEP {
-			return
+			return nil
 		}
 
 		if isFirstLine {
@@ -67,6 +94,9 @@ func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 		}
 		obj.monitor.ProcessedData(data.timeStamp.String(), 0, 0)
 
+		err = obj.saveRecord(data)
+
+		return err
 	}
 
 	for isBreak := false; !isBreak; {
@@ -75,7 +105,9 @@ func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 			isBreak = true
 		} else {
 			// fmt.Println(string(buf))
-			readRecord(*buf, n)
+			if err := readRecord(*buf, n); err != nil {
+				return err
+			}
 			in.Free(buf)
 		}
 	}
@@ -85,31 +117,42 @@ func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-type entryLabel int
+func (obj *logParser) saveRecord(data dataEntry) error {
 
-const (
-	labelNONE entryLabel = iota
-	labelSEP
-	labelRESET
-	labelCPUTotal
-	labelCPU
-	labelCPL
-	labelMEM
-	labelSWP
-	labelPAG
-	labelPSI
-	labelDSK
-	labelNFC
-	labelNFS
-	labelNET
-	labelNUM
-	labelPRG
-	labelPRC
-	labelPRE
-	labelPRM
-	labelPRD
-	labelPRN
-)
+	desc, ok := obj.desc[data.label]
+	if !ok {
+		return fmt.Errorf("label not found")
+	}
+
+	counters, err := desc.getCounters(data.interval, data.points)
+	if err != nil {
+		return err
+	}
+	for _, counter := range counters {
+
+		id := obj.getCounterID(desc.getLabel(), counter.key, desc.getSubName(data.points))
+
+		obj.storage.WriteRow("dataPoints", data.timeStamp, id, counter.value)
+	}
+
+	return nil
+}
+
+func (obj *logParser) getCounterID(label, name, subName string) int {
+
+	longName := fmt.Sprintf("%s^%s^%s", label, name, subName)
+	if id, ok := obj.counterID[longName]; ok {
+		return id
+	}
+
+	id := len(obj.counterID) + 1
+	obj.storage.WriteRow("counters", id, longName, obj.computerID, label, name, subName)
+	obj.counterID[longName] = id
+
+	return id
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 // cpu chuwi 1769451659 2026/01/26 21:20:59 432949 100 0 81874 265308 1771 2603194 13107 0 4832 0 0 2399 70 0 0
 type dataEntry struct {
@@ -117,7 +160,7 @@ type dataEntry struct {
 	computer  string
 	timeStamp time.Time
 	interval  int64
-	points    []float64
+	points    [][]byte
 }
 
 func newEntry(buf []byte) (res dataEntry, err error) {
@@ -145,6 +188,7 @@ func newEntry(buf []byte) (res dataEntry, err error) {
 	if res.interval, err = bytesToInt64(bufSlice[5]); err != nil {
 		return
 	}
+	res.points = bufSlice[6:]
 
 	return
 }
@@ -204,6 +248,19 @@ func bytesToInt64(b []byte) (int64, error) {
 
 	// Parse the string as a base-10 integer with 64-bit size
 	i, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return i, nil
+}
+
+func bytesToFloat64(b []byte) (float64, error) {
+	// Convert byte slice to string
+	s := string(b)
+
+	// Parse the string as a base-10 integer with 64-bit size
+	i, err := strconv.ParseFloat(s, 10)
 	if err != nil {
 		return 0, err
 	}

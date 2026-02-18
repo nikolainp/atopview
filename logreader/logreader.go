@@ -19,7 +19,7 @@ type LogReader interface {
 type DataTransfer interface {
 	Close()
 	GetBuffer() *[]byte
-	Send(b *[]byte, n int)
+	Send(ctx context.Context, b *[]byte, n int) bool
 	Receive(context.Context) (b *[]byte, n int, ok bool)
 	Free(b *[]byte)
 }
@@ -104,11 +104,14 @@ func (obj *logReader) openLogFile() (data io.Reader, err error) {
 }
 
 func (obj *logReader) closeLogFile() (errText string, err error) {
-	if errText, err = readAllStream(obj.stderr); err != nil {
-		return
+
+	if obj.err != nil {
+		if errText, err = readAllStream(obj.stderr); err != nil {
+			return
+		}
 	}
 
-	err = obj.command.Wait()
+	//err = obj.command.Wait()
 
 	if err == nil {
 		err = obj.err
@@ -152,8 +155,13 @@ func (obj *dataTransfer) Close() {
 func (obj *dataTransfer) GetBuffer() *[]byte {
 	return obj.pool.Get().(*[]byte)
 }
-func (obj *dataTransfer) Send(b *[]byte, n int) {
-	obj.ch <- streamBuffer{b, n}
+func (obj *dataTransfer) Send(ctx context.Context, b *[]byte, n int) (ok bool) {
+	select {
+	case <-ctx.Done():
+		return false
+	case obj.ch <- streamBuffer{b, n}:
+		return true
+	}
 }
 func (obj *dataTransfer) Receive(ctx context.Context) (b *[]byte, n int, ok bool) {
 	select {
@@ -202,7 +210,7 @@ func (obj *logReader) doRead(ctx context.Context, sIn io.Reader) {
 			case <-ctx.Done():
 				isBreak = true
 			default:
-				obj.transfer.Send(buf, n)
+				obj.transfer.Send(ctx, buf, n)
 			}
 		}
 	}
@@ -229,7 +237,7 @@ func (obj *logReader) doWrite(ctx context.Context, out DataTransfer) {
 				if i == 0 && isExistsLastLine {
 					lastLine = append(lastLine, bufSlice[i]...)
 					if len(bufSlice) > 1 {
-						writeToChan(out, lastLine)
+						writeToChan(ctx, out, lastLine)
 						isExistsLastLine = false
 					}
 					continue
@@ -246,7 +254,7 @@ func (obj *logReader) doWrite(ctx context.Context, out DataTransfer) {
 					continue
 				}
 
-				writeToChan(out, bufSlice[i])
+				writeToChan(ctx, out, bufSlice[i])
 			}
 		}
 	}
@@ -255,7 +263,7 @@ func (obj *logReader) doWrite(ctx context.Context, out DataTransfer) {
 		buf, n, ok := obj.transfer.Receive(ctx)
 		if !ok || n == 0 {
 			if isExistsLastLine {
-				writeToChan(out, lastLine)
+				writeToChan(ctx, out, lastLine)
 			}
 			isBreak = true
 		} else {
@@ -286,7 +294,7 @@ func readAllStream(data io.Reader) (string, error) {
 	return totalBuf.String(), nil
 }
 
-func writeToChan(out DataTransfer, buf []byte) {
+func writeToChan(ctx context.Context, out DataTransfer, buf []byte) {
 
 	bufCopy := out.GetBuffer()
 	if len(*bufCopy) < len(buf) {
@@ -295,5 +303,5 @@ func writeToChan(out DataTransfer, buf []byte) {
 	}
 	copy(*bufCopy, buf)
 
-	out.Send(bufCopy, len(buf))
+	out.Send(ctx, bufCopy, len(buf))
 }

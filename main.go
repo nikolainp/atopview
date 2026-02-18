@@ -47,9 +47,12 @@ func main() {
 		transfer := logreader.NewDataTransfer(1024)
 
 		wg.Go(func() {
-			worker := logparser.NewLogParser()
+			worker := logparser.NewLogParser(storage)
 			worker.WithMonitor(monitor)
-			worker.ReadData(ctx, transfer)
+			if err := worker.ReadData(ctx, transfer); err != nil {
+				fmt.Fprintf(os.Stderr, "parse error: %v\n", err)
+				cancel()
+			}
 		})
 		wg.Go(func() {
 			worker := logreader.NewLogReader(conf.PathUtilinty, conf.PathLog)

@@ -20,6 +20,7 @@ type queryResult struct {
 	rows *sql.Rows
 }
 
+// SelectQuery ...
 func (obj *Storage) SelectQuery(table string, columns ...string) interface {
 	SetTimeFilter(struct {
 		From time.Time
