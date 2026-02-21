@@ -13,6 +13,7 @@ import (
 	"github.com/nikolainp/atopview/logreader"
 	"github.com/nikolainp/atopview/monitor"
 	"github.com/nikolainp/atopview/storage"
+	"github.com/nikolainp/atopview/webreporter"
 )
 
 var (
@@ -75,7 +76,7 @@ func main() {
 		}
 	}
 
-	// startWebServer(storage, cancelChan)
+	startWebServer(ctx, storage)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -139,10 +140,9 @@ func getOldStorage(path string) (*storage.Storage, error) {
 	return db, err
 }
 
-// func startWebServer(storage *storage.Storage, isCancelChan chan bool) {
-// 	reporter := webreporter.New(storage, isCancelChan)
-// 	if err := reporter.Start(); err != nil {
-// 		fmt.Fprintf(os.Stderr, "WebServer error: %v", err)
-// 		cancelAndExit()
-// 	}
-// }
+func startWebServer(ctx context.Context, storage *storage.Storage) {
+	reporter := webreporter.NewWebReporter(storage)
+	if err := reporter.Start(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "WebServer error: %v", err)
+	}
+}

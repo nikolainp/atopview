@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>/*{{.Title}}*/</title>
+        
+        <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/echarts-gl/dist/echarts-gl.min.js"></script>
+
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        <link rel="stylesheet" href="https://cdn.datatables.net/2.3.6/css/dataTables.dataTables.css" />
+        <script src="https://cdn.datatables.net/2.3.6/js/dataTables.js"></script>
+
+        <script type="text/javascript">
+            var graphChart;
+            var graphOptions;
+            var plotColors;
+            var dataTable;
+
+            function plotOnLoad(){
+                plotColors = plotGraph();
+                plotTable();
+            }
+
+            function plotGraph() {
+                var chartDom = document.getElementById('graphDiv');
+                graphChart = echarts.init(chartDom, null, {
+                    renderer: 'canvas'
+                });
+
+                graphOptions = {
+                    animation: false,
+                    tooltip: {
+                        trigger: 'axis',
+                        position: function (pt) {
+                            return [pt[0], '10%'];
+                        }
+                    },
+                    title: {
+                        left: 'center',
+                        text: '/*{{.Title}}*/'
+                    },
+                    toolbox: {
+                        feature: {
+                            dataView: {},
+                            dataZoom: {
+                                yAxisIndex: 'none'
+                            },
+                            restore: {},
+                            saveAsImage: { type: 'png' }
+                        }
+                    },
+                    grid: {
+                        left: 0,
+                        right: 5
+                    },
+                    xAxis: {
+                        type: 'time',
+                        boundaryGap: false
+                    },
+                    yAxis: {
+                        type: 'value',
+                        boundaryGap: [0, '100%']
+                    },
+                    dataZoom: [
+                        {
+                            type: 'inside',
+                            start: 0,
+                            end: 100
+                        },
+                        {
+                            start: 0,
+                            end: 100
+                        }
+                    ],
+                    series: [],
+                    legend: {
+                        orient: 'vertical',
+                        right: 10,
+                        top: 'center',
+                        show: false
+                    }
+                };
+
+                /*{{ range $i, $data := .Series }}*/
+                graphOptions.series.push({
+                    name: '/*{{$data.Name}}*/',
+                    type: 'line',
+                    symbol: 'circle',
+                    sampling: 'lttb',
+                    connectNulls: true,
+                    data: [/*{{$data.Data}}*/],
+                    emphasis: {itemStyle: {color: 'black', width: 6}, lineStyle: {color: 'black',  width: 4}}
+                });
+                /*{{end}}*/
+
+                graphOptions && graphChart.setOption(graphOptions);
+
+                window.addEventListener('resize', function() {
+                    graphChart.resize();
+                });
+
+                return graphChart.getModel().getSeries().map(s => {
+                    return {
+                        seriesIndex: s.seriesIndex,
+                        seriesColor: graphChart.getVisual({seriesIndex: s.seriesIndex}, 'color')
+                    }
+                })
+            }
+    
+            function plotTable() {
+                dataTable = new DataTable('#statTable', {
+                    paging: false,
+                    info: false,
+                    searching: false,
+                    "columnDefs": [
+                        {
+                            "targets": 0,
+                            "createdCell": function (td, cellData, rowData, row, col) {
+                                 $(td).css('background-color', plotColors[row].seriesColor);
+                            },
+                            'render': function(data, type, full, meta) {
+                                if (data === "enable" || data === true) {
+                                    return '<input type="checkbox" class="checkbox_check">';
+                                } else {
+                                    return '<input type="checkbox"  checked="checked" class="checkbox_check">';
+                                }
+                            }
+                        }
+                    ]
+                });
+
+                dataTable.on('change', 'input[type="checkbox"]', function() {
+                    let $row = $(this).closest('tr');
+                    let rowData = dataTable.row($row).data();
+                    let dataName = rowData[1];
+
+                    graphChart.dispatchAction({ type: 'legendToggleSelect', name: dataName });
+                });
+                dataTable.on('mouseenter', 'tr', function() {
+                    let $row = $(this).closest('tr');
+                    let rowData = dataTable.row($row).data();
+
+                    if (rowData != undefined) {
+                        let dataName = rowData[1];
+                        graphChart.dispatchAction({ type: 'highlight', seriesName: dataName});
+                    }
+                });
+                dataTable.on('mouseleave', 'tr', function() {
+                    let $row = $(this).closest('tr');
+                    let rowData = dataTable.row($row).data();
+
+                    if (rowData != undefined) {
+                        let dataName = rowData[1];
+                        graphChart.dispatchAction({ type: 'downplay', seriesName: dataName});
+                    }
+                });
+            }
+
+            function changeStyle(styleData) {
+                let data = graphOptions.series[styleData.name];
+    
+                if (styleData.value == "marks") {
+                    data.type = "scatter";
+                    data.symbol = 'circle';
+                }
+                if (styleData.value == "line") {
+                    data.type = "line";
+                    data.symbol = 'none';
+                }
+                if (styleData.value == "line+marks") {
+                    data.type = "line";
+                    data.symbol = 'circle';
+                }
+
+                graphChart.setOption(graphOptions);
+            }
+    </script>
+
+    </head>
+    <body onLoad="plotOnLoad()">
+        <div id="graphDiv" style="width: 100%; height: 600px;"></div>
+        <table id="statTable" class="display">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Name</th>
+                    <th>Min</th>
+                    <th>Max</th>
+                    <th>Avg</th>
+                    <th>Count</th>
+                    <th>Style</th>
+                </tr>
+            </thead>
+            <tbody>
+                /*{{range $i, $data := .Series -}}*/
+                <tr>
+                    <td></td>
+                    <td>/*{{$data.Name}}*/</td>
+                    <td>/*{{$data.Minimum}}*/</td>
+                    <td>/*{{$data.Maximum}}*/</td>
+                    <td>/*{{$data.Average}}*/</td>
+                    <td>/*{{$data.Count}}*/</td>
+                    <td><select id="style" name="0" onchange="changeStyle(this)">
+                        <option value="marks">marks</option>
+                        <option value="line">line</option>
+                        <option value="line+marks" selected>line+marks</option>
+                    </select></td>
+                </tr>
+                /*{{end}}*/
+            </tbody>
+        </table>
+    </body>
+</html>
