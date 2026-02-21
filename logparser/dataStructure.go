@@ -79,6 +79,22 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{name: "instructions", description: "instructions executed by this CPU and cycles for this CPU"},
 			},
 		},
+		labelCPL: {},
+		labelMEM: {},
+		labelSWP: {},
+		labelPAG: {},
+		labelPSI: {},
+		labelDSK: {},
+		labelNFC: {},
+		labelNFS: {},
+		labelNET: {},
+		labelNUM: {},
+		labelPRG: {},
+		labelPRC: {},
+		labelPRE: {},
+		labelPRM: {},
+		labelPRD: {},
+		labelPRN: {},
 	}
 
 	return data
@@ -90,7 +106,15 @@ func (obj *dataDescription) getLabel() string {
 	return obj.label
 }
 
-func (obj *dataDescription) getSubName([][]byte) string {
+func (obj *dataDescription) getSubName(data [][]byte) string {
+
+	length := min(len(data), len(obj.fields))
+	for i := 0; i < length; i++ {
+		if obj.fields[i].isSubName {
+			return string(data[i])
+		}
+	}
+
 	return ""
 }
 
@@ -130,7 +154,10 @@ func (obj *dataDescription) getCounters(interval int64, data [][]byte) ([]struct
 			value = 100 * value / (scale * float64(interval))
 		}
 
-		res = append(res, struct{key string; value float64}{obj.fields[i].name, value})
+		res = append(res, struct {
+			key   string
+			value float64
+		}{obj.fields[i].name, value})
 	}
 
 	return res, err
