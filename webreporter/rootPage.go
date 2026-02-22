@@ -23,6 +23,7 @@ func (obj *webReporter) rootPage(w http.ResponseWriter, req *http.Request) {
 		DataFilter                     string
 		Navigation                     string
 		Processes                      []string
+		Series                         []struct{ Name, URL string }
 	}{
 		Title:           obj.title,
 		Version:         details.Version,
@@ -31,9 +32,10 @@ func (obj *webReporter) rootPage(w http.ResponseWriter, req *http.Request) {
 		ProcessingSpeed: byteCount(details.ProcessingSpeed),
 		FirstEventTime:  details.FirstEventTime.Format("2006-01-02 15:04:05"),
 		LastEventTime:   details.LastEventTime.Format("2006-01-02 15:04:05"),
-		DataFilter:      obj.filter.getContent(req.URL.String()),
+		//DataFilter:      obj.filter.getContent(req.URL.String()),
 		//Navigation:      obj.navigator.getMainMenu(),
 		//Processes:       toDataRows(obj.getProcesses()),
+		Series: []struct{ Name, URL string }{{Name: "test1", URL: "test1.json"}, {Name: "test2", URL: "test2.json"}},
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

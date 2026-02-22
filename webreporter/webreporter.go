@@ -54,7 +54,10 @@ func NewWebReporter(storage *storage.Storage) WebReporter {
 	obj.storage = storage
 	obj.logger = log.New(os.Stdout, "http: ", log.LstdFlags)
 
-	obj.templates, err = template.ParseFS(templateContent, "templates/*.html")
+	obj.templates, err = template.
+		New("main").
+		Delims("/*{{", "}}*/").
+		ParseFS(templateContent, "templates/*.html")
 	checkErr(err)
 
 	//	details := obj.getRootDetails()
@@ -78,16 +81,7 @@ func (obj *webReporter) Start(ctx context.Context) error {
 
 	wg.Go(func() {
 		<-ctx.Done()
-
-		log.Println("web-server is shutting down...")
-
-		webCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		obj.srv.SetKeepAlivesEnabled(false)
-		if err := obj.srv.Shutdown(webCtx); err != nil {
-			log.Fatalf("could not gracefully shutdown the web-server: %v\n", err)
-		}
+		obj.stopServer()
 	})
 
 	err := obj.srv.ListenAndServe()
@@ -101,6 +95,18 @@ func (obj *webReporter) Start(ctx context.Context) error {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+func (obj *webReporter) stopServer() {
+	log.Println("web-server is shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	obj.srv.SetKeepAlivesEnabled(false)
+	if err := obj.srv.Shutdown(ctx); err != nil {
+		log.Fatalf("could not gracefully shutdown the web-server: %v\n", err)
+	}
+}
 
 func (obj *webReporter) getHandlers() http.Handler {
 

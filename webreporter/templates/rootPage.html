@@ -24,6 +24,25 @@
                 plotTable();
             }
 
+			function loadPlotData(dataName, dataUrl) {
+				var d = $.Deferred();
+
+				$.get(dataUrl).done(function(data) {
+					graphOptions.series.push({
+						name: dataName,
+						type: 'line',
+						symbol: 'circle',
+						sampling: 'lttb',
+						connectNulls: true,
+						data: data.batch,
+						emphasis: {itemStyle: {color: 'black', width: 6}, lineStyle: {color: 'black',  width: 4}}
+					});
+					d.resolve();
+				});
+
+  				return d;
+			}
+
             function plotGraph() {
                 var chartDom = document.getElementById('graphDiv');
                 graphChart = echarts.init(chartDom, null, {
@@ -84,19 +103,17 @@
                     }
                 };
 
+				var loadWait = []
                 /*{{ range $i, $data := .Series }}*/
-                graphOptions.series.push({
-                    name: '/*{{$data.Name}}*/',
-                    type: 'line',
-                    symbol: 'circle',
-                    sampling: 'lttb',
-                    connectNulls: true,
-                    data: [/*{{$data.Data}}*/],
-                    emphasis: {itemStyle: {color: 'black', width: 6}, lineStyle: {color: 'black',  width: 4}}
-                });
+				loadWait.push(loadPlotData('/*{{$data.Name}}*/','/*{{$data.URL}}*/'))
                 /*{{end}}*/
-
+				
                 graphOptions && graphChart.setOption(graphOptions);
+				graphChart.showLoading();
+				$.when.apply(0, loadWait).done(function() {
+				    graphChart.hideLoading();
+    				graphChart.setOption(graphOptions);
+				});
 
                 window.addEventListener('resize', function() {
                     graphChart.resize();
@@ -115,6 +132,10 @@
                     paging: false,
                     info: false,
                     searching: false,
+					ajax: {
+    				    url: '/api/myData',
+        				dataSrc: ''
+    				},
                     "columnDefs": [
                         {
                             "targets": 0,
@@ -195,21 +216,21 @@
                 </tr>
             </thead>
             <tbody>
-                /*{{range $i, $data := .Series -}}*/
+                /**{{range $i, $data := .Series -}}**/
                 <tr>
                     <td></td>
-                    <td>/*{{$data.Name}}*/</td>
-                    <td>/*{{$data.Minimum}}*/</td>
-                    <td>/*{{$data.Maximum}}*/</td>
-                    <td>/*{{$data.Average}}*/</td>
-                    <td>/*{{$data.Count}}*/</td>
+                    <td>/**{{$data.Name}}**/</td>
+                    <td>/**{{$data.Minimum}}**/</td>
+                    <td>/**{{$data.Maximum}}**/</td>
+                    <td>/**{{$data.Average}}**/</td>
+                    <td>/**{{$data.Count}}**/</td>
                     <td><select id="style" name="0" onchange="changeStyle(this)">
                         <option value="marks">marks</option>
                         <option value="line">line</option>
                         <option value="line+marks" selected>line+marks</option>
                     </select></td>
                 </tr>
-                /*{{end}}*/
+                /**{{end}}**/
             </tbody>
         </table>
     </body>
