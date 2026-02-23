@@ -37,10 +37,9 @@ type webReporter struct {
 
 	title  string
 	filter *dataFilter
+	counters map[int]string
 
 	port int
-
-	cancelChan chan bool
 }
 
 // NewWebReporter ...

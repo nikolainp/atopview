@@ -3,6 +3,8 @@ package webreporter
 import (
 	"fmt"
 	"net/http"
+	"strings"
+	"text/template"
 	"time"
 )
 
@@ -13,6 +15,7 @@ func (obj *webReporter) rootPage(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	obj.counters = obj.listCounters()
 	details := obj.getRootDetails()
 
 	data := struct {
@@ -22,8 +25,7 @@ func (obj *webReporter) rootPage(w http.ResponseWriter, req *http.Request) {
 		FirstEventTime, LastEventTime  string
 		DataFilter                     string
 		Navigation                     string
-		Processes                      []string
-		Series                         []struct{ Name, URL string }
+		Series                         map[int]string
 	}{
 		Title:           obj.title,
 		Version:         details.Version,
@@ -35,7 +37,7 @@ func (obj *webReporter) rootPage(w http.ResponseWriter, req *http.Request) {
 		//DataFilter:      obj.filter.getContent(req.URL.String()),
 		//Navigation:      obj.navigator.getMainMenu(),
 		//Processes:       toDataRows(obj.getProcesses()),
-		Series: []struct{ Name, URL string }{{Name: "test1", URL: "test1.json"}, {Name: "test2", URL: "test2.json"}},
+		Series: obj.counters,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -65,70 +67,73 @@ func (obj *webReporter) getRootDetails() (data rootDetails) {
 	return
 }
 
-// func (obj *webReporter) getProcesses() (data map[string]process) {
+func (obj *webReporter) listCounters() map[int]string {
 
-// 	var elem process
+	res := make(map[int]string, 0)
 
-// 	data = make(map[string]process, 0)
+	details := obj.storage.SelectQuery("counters", "id", "fullName")
+	// 	details.SetTimeFilter(obj.filter.getData())
+	details.SetOrder("id")
 
-// 	details := obj.storage.SelectQuery("processes")
-// 	details.SetTimeFilter(obj.filter.getData())
-// 	details.SetOrder("Name")
+	var id int
+	var fullName string
+	for details.Next(&id, &fullName) {
+		res[id] = fullName
+	}
 
-// 	orderID := 0
-// 	for details.Next(
-// 		&elem.Name, &elem.Catalog, &elem.Process,
-// 		&elem.ProcessID, &elem.ProcessType,
-// 		&elem.Pid, &elem.Port, &elem.UID,
-// 		&elem.ServerName, &elem.IP,
-// 		&elem.FirstEventTime, &elem.LastEventTime) {
-
-// 		elem.order = orderID
-// 		data[elem.ProcessID] = elem
-// 		orderID++
-// 	}
-
-// 	return
-// }
+	return res
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// func (obj *WebReporter) getProcessesStatistics() (data dataSource) {
+func (obj *webReporter) getCounterSeries(id string) string {
 
-// 	var elem process
+	rows := make([]string, 0)
 
-// 	data.columns = make([]string, 6)
-// 	data.columns[0] = `{"id":"","label":"Process","type":"string"}`
-// 	data.columns[1] = `{"id":"","label":"Server","type":"string"}`
-// 	data.columns[2] = `{"id":"","label":"IP","type":"string"}`
-// 	data.columns[3] = `{"id":"","label":"Port","type":"string"}`
-// 	data.columns[4] = `{"id":"","label":"First event","type":"datetime"}`
-// 	data.columns[5] = `{"id":"","label":"Last event","type":"datetime"}`
+	details := obj.storage.SelectQuery("dataPoints", "timeStamp", "value")
+	//details.SetTimeFilter(obj.filter.getData())
+	details.SetFilter("counter = ?", id)
+	details.SetOrder("timeStamp")
 
-// 	data.rows = make([]string, 0)
+	var timeStamp time.Time
+	var value float64
+	for details.Next(&timeStamp, &value) {
+		rows = append(rows, fmt.Sprintf("[\"%s\", %g]",
+			timeStamp.Format("2006-01-02 15:04:05"), value))
+	}
 
-// 	details := obj.storage.SelectQuery("processes")
-// 	details.SetTimeFilter(obj.filter.getData())
-// 	details.SetOrder("Name")
+	return fmt.Sprintf("{\"id\": %s, \"data\": [%s]}",
+		id,
+		strings.Join(rows, ","))
+}
 
-// 	for details.Next(
-// 		&elem.Name, &elem.Catalog, &elem.Process,
-// 		&elem.ProcessID, &elem.ProcessType,
-// 		&elem.Pid, &elem.Port, &elem.UID,
-// 		&elem.ServerName, &elem.IP,
-// 		&elem.FirstEventTime, &elem.LastEventTime) {
+func (obj *webReporter) getCountersStatistics() string {
 
-// 		data.rows = append(data.rows, fmt.Sprintf(
-// 			`{"c":[{"v":"%s"},{"v":"%s"},{"v":"%s"},{"v":"%s"},{"v":"Date(%s)"},{"v":"Date(%s)"}]}`,
-// 			template.JSEscapeString(elem.Name),
-// 			elem.ServerName, elem.IP, elem.Port,
-// 			elem.FirstEventTime.Format("2006, 01, 02, 15, 04, 05"),
-// 			elem.LastEventTime.Format("2006, 01, 02, 15, 04, 05"),
-// 		))
-// 	}
+	rows := make([]string, 0)
 
-// 	return
-// }
+	var counter int
+	var cMin, cMax, cAvg, cCount float64
+
+	details := obj.storage.SelectQuery("dataPoints", "counter",
+		"MIN(value)", "AVG(value)", "MAX(value), COUNT(*)",
+	)
+	//details.SetTimeFilter(obj.filter.getData())
+	details.SetGroup("counter")
+	details.SetOrder("counter")
+
+	for details.Next(
+		&counter,
+		&cMin, &cMax, &cAvg, &cCount,
+	) {
+		rows = append(rows, fmt.Sprintf(
+			"{\"N\": true, \"Name\": \"%s\", \"Min\": %g, \"Max\": %g, \"Avg\": %g, \"Count\": %g}",
+			template.JSEscapeString(obj.counters[counter]),
+			cMin, cMax, cAvg, cCount,
+		))
+	}
+
+	return fmt.Sprintf("[%s]", strings.Join(rows, ","))
+}
 
 func byteCount(b int64) string {
 	const unit = 1000

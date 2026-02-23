@@ -20,24 +20,42 @@
             var dataTable;
 
             function plotOnLoad(){
-                plotColors = plotGraph();
-                plotTable();
+                loadWait = plotGraph();				
+				$.when(...loadWait).done(function() {
+				    graphChart.hideLoading();
+    				graphChart.setOption(graphOptions);
+
+					plotColors = graphChart.getModel().getSeries().map(s => {
+                    	return {
+                        	seriesIndex: s.seriesIndex,
+                        	seriesColor: graphChart.getVisual({seriesIndex: s.	seriesIndex}, 'color')
+                    	}
+                	});
+					plotTable();
+				});
             }
 
 			function loadPlotData(dataName, dataUrl) {
 				var d = $.Deferred();
 
-				$.get(dataUrl).done(function(data) {
+				$.get({url: dataUrl, dataType: 'json'}).done(function(res) {
 					graphOptions.series.push({
 						name: dataName,
 						type: 'line',
 						symbol: 'circle',
 						sampling: 'lttb',
 						connectNulls: true,
-						data: data.batch,
+						data: res.data,
 						emphasis: {itemStyle: {color: 'black', width: 6}, lineStyle: {color: 'black',  width: 4}}
 					});
+				})
+				.always(function(){
 					d.resolve();
+				})
+				.fail(function(jqXHR, textStatus, errorThrown) {
+					console.error("Error status:", textStatus);
+					console.error("Error message:", errorThrown);
+					console.error("Response text:", jqXHR.responseText); 
 				});
 
   				return d;
@@ -104,27 +122,18 @@
                 };
 
 				var loadWait = []
-                /*{{ range $i, $data := .Series }}*/
-				loadWait.push(loadPlotData('/*{{$data.Name}}*/','/*{{$data.URL}}*/'))
+                /*{{ range $key, $value  := .Series }}*/
+				loadWait.push(loadPlotData('/*{{$value}}*/','/data/series//*{{$key}}*/'))
                 /*{{end}}*/
 				
                 graphOptions && graphChart.setOption(graphOptions);
 				graphChart.showLoading();
-				$.when.apply(0, loadWait).done(function() {
-				    graphChart.hideLoading();
-    				graphChart.setOption(graphOptions);
-				});
 
                 window.addEventListener('resize', function() {
                     graphChart.resize();
                 });
 
-                return graphChart.getModel().getSeries().map(s => {
-                    return {
-                        seriesIndex: s.seriesIndex,
-                        seriesColor: graphChart.getVisual({seriesIndex: s.seriesIndex}, 'color')
-                    }
-                })
+                return loadWait
             }
     
             function plotTable() {
@@ -133,9 +142,17 @@
                     info: false,
                     searching: false,
 					ajax: {
-    				    url: '/api/myData',
+    				    url: '/data/statistics/',
         				dataSrc: ''
     				},
+					columns: [
+						{ title: "N", data: 'N' },
+						{ title: "Name", data: 'Name' },
+						{ title: "Min", data: 'Min' },
+						{ title: "Max", data: 'Max' },
+						{ title: "Avg", data: 'Avg' },
+						{ title: "Count", data: 'Count' }
+					],
                     "columnDefs": [
                         {
                             "targets": 0,
@@ -204,9 +221,10 @@
     <body onLoad="plotOnLoad()">
         <div id="graphDiv" style="width: 100%; height: 600px;"></div>
         <table id="statTable" class="display">
+<!--
             <thead>
                 <tr>
-                    <th></th>
+                    <th>N</th>
                     <th>Name</th>
                     <th>Min</th>
                     <th>Max</th>
@@ -216,6 +234,8 @@
                 </tr>
             </thead>
             <tbody>
+-->
+<!---
                 /**{{range $i, $data := .Series -}}**/
                 <tr>
                     <td></td>
@@ -231,6 +251,7 @@
                     </select></td>
                 </tr>
                 /**{{end}}**/
+			-->
             </tbody>
         </table>
     </body>
