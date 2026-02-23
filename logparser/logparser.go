@@ -128,9 +128,10 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 	if err != nil {
 		return err
 	}
+	subName := desc.getSubName(data.points)
 	for _, counter := range counters {
 
-		id := obj.getCounterID(desc.getLabel(), counter.key, desc.getSubName(data.points))
+		id := obj.getCounterID(desc, counter.key, subName)
 
 		obj.storage.WriteRow("dataPoints", data.timeStamp, id, counter.value)
 	}
@@ -138,15 +139,18 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 	return nil
 }
 
-func (obj *logParser) getCounterID(label, name, subName string) int {
+func (obj *logParser) getCounterID(desc dataDescription, name, subName string) int {
 
+	label := desc.getLabel()
 	longName := fmt.Sprintf("%s^%s^%s", label, name, subName)
 	if id, ok := obj.counterID[longName]; ok {
 		return id
 	}
 
 	id := len(obj.counterID) + 1
-	obj.storage.WriteRow("counters", id, longName, obj.computerID, label, name, subName)
+	details := desc.getDetails(name)
+
+	obj.storage.WriteRow("counters", id, details.enable, longName, obj.computerID, label, name, subName, details.description)
 	obj.counterID[longName] = id
 
 	return id

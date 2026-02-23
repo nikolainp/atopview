@@ -73,6 +73,7 @@ func (obj *webReporter) listCounters() map[int]string {
 
 	details := obj.storage.SelectQuery("counters", "id", "fullName")
 	// 	details.SetTimeFilter(obj.filter.getData())
+	details.SetFilter("enable = TRUE")
 	details.SetOrder("id")
 
 	var id int
@@ -118,6 +119,7 @@ func (obj *webReporter) getCountersStatistics() string {
 		"MIN(value)", "AVG(value)", "MAX(value), COUNT(*)",
 	)
 	//details.SetTimeFilter(obj.filter.getData())
+	details.SetFilter("counter IN (SELECT id FROM counters WHERE enable = TRUE)")
 	details.SetGroup("counter")
 	details.SetOrder("counter")
 
@@ -126,7 +128,7 @@ func (obj *webReporter) getCountersStatistics() string {
 		&cMin, &cMax, &cAvg, &cCount,
 	) {
 		rows = append(rows, fmt.Sprintf(
-			"{\"N\": true, \"Name\": \"%s\", \"Min\": %g, \"Max\": %g, \"Avg\": %g, \"Count\": %g}",
+			"{\"Name\": \"%s\", \"Min\": %g, \"Max\": %g, \"Avg\": %g, \"Count\": %g}",
 			template.JSEscapeString(obj.counters[counter]),
 			cMin, cMax, cAvg, cCount,
 		))

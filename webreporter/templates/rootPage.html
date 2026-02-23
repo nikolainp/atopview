@@ -146,12 +146,13 @@
         				dataSrc: ''
     				},
 					columns: [
-						{ title: "N", data: 'N' },
+						{ title: "N", defaultContent: true },
 						{ title: "Name", data: 'Name' },
 						{ title: "Min", data: 'Min' },
 						{ title: "Max", data: 'Max' },
 						{ title: "Avg", data: 'Avg' },
-						{ title: "Count", data: 'Count' }
+						{ title: "Count", data: 'Count' },
+                        { Title: "Style", defaultContent: 'line+marks'}
 					],
                     "columnDefs": [
                         {
@@ -165,6 +166,16 @@
                                 } else {
                                     return '<input type="checkbox"  checked="checked" class="checkbox_check">';
                                 }
+                            }
+                        },
+                        {
+                            "targets": 6,
+                            "render": function(data, type, full, meta) {
+                                return '<select id="style" name="0" onchange="changeStyle(this)">\
+                                    <option value="marks">marks</option>\
+                                    <option value="line">line</option>\
+                                    <option value="line+marks">line+marks</option>\
+                                </select>';
                             }
                         }
                     ]

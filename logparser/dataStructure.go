@@ -33,6 +33,7 @@ type dataDescription struct {
 
 type dataField struct {
 	name        string
+	enable      bool
 	isSubName   bool
 	isScale     bool
 	isNeedScale bool
@@ -42,12 +43,12 @@ type dataField struct {
 func getDataDescription() map[entryLabel]dataDescription {
 	data := map[entryLabel]dataDescription{
 		labelCPUTotal: {
-			label: "CPU (total)",
+			label: "CPU(total)",
 			fields: []dataField{
 				{name: "", isScale: true, description: "total number of clock-ticks per second for this machine"},
 				{name: "", description: "number of processors"},
 				{name: "system", isNeedScale: true, description: "consumption for all CPUs in system mode"},
-				{name: "user", isNeedScale: true, description: "consumption for all CPUs in user mode"},
+				{name: "user", enable: true, isNeedScale: true, description: "consumption for all CPUs in user mode"},
 				{name: "user nice", isNeedScale: true, description: "consumption for all CPUs in user mode for niced processes"},
 				{name: "idle", isNeedScale: true, description: "consumption for all CPUs in idle mode"},
 				{name: "wait", isNeedScale: true, description: "consumption for all CPUs in wait mode"},
@@ -61,12 +62,12 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelCPU: {
-			label: "CPU (core)",
+			label: "CPU(core)",
 			fields: []dataField{
 				{name: "", isScale: true, description: "total number of clock-ticks per second for this machine"},
 				{name: "", isSubName: true, description: "processor-number"},
 				{name: "system", isNeedScale: true, description: "consumption for this CPU in system  mode "},
-				{name: "user", isNeedScale: true, description: "consumption for this CPU in user mode"},
+				{name: "user", enable: true, isNeedScale: true, description: "consumption for this CPU in user mode"},
 				{name: "user nicec", isNeedScale: true, description: "consumption for this CPU in user mode for niced processes"},
 				{name: "idle", isNeedScale: true, description: "consumption for this CPU in idle mode"},
 				{name: "wait", isNeedScale: true, description: "consumption for this CPU in wait mode"},
@@ -104,6 +105,15 @@ func getDataDescription() map[entryLabel]dataDescription {
 
 func (obj *dataDescription) getLabel() string {
 	return obj.label
+}
+
+func (obj *dataDescription) getDetails(name string) dataField {
+	for _, field := range obj.fields {
+		if field.name == name {
+			return field
+		}
+	}
+	return dataField{}
 }
 
 func (obj *dataDescription) getSubName(data [][]byte) string {
