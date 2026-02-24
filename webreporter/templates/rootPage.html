@@ -124,7 +124,7 @@
 				var loadWait = []
                 /*{{ range $key, $value  := .Series }}*/
 				loadWait.push(loadPlotData('/*{{$value}}*/','/data/series//*{{$key}}*/'))
-                /*{{end}}*/
+                /*{{- end}}*/
 				
                 graphOptions && graphChart.setOption(graphOptions);
 				graphChart.showLoading();
@@ -184,7 +184,7 @@
                 dataTable.on('change', 'input[type="checkbox"]', function() {
                     let $row = $(this).closest('tr');
                     let rowData = dataTable.row($row).data();
-                    let dataName = rowData[1];
+                    let dataName = rowData.Name;
 
                     graphChart.dispatchAction({ type: 'legendToggleSelect', name: dataName });
                 });
@@ -193,7 +193,7 @@
                     let rowData = dataTable.row($row).data();
 
                     if (rowData != undefined) {
-                        let dataName = rowData[1];
+                        let dataName = rowData.Name;
                         graphChart.dispatchAction({ type: 'highlight', seriesName: dataName});
                     }
                 });
@@ -202,7 +202,7 @@
                     let rowData = dataTable.row($row).data();
 
                     if (rowData != undefined) {
-                        let dataName = rowData[1];
+                        let dataName = rowData.Name;
                         graphChart.dispatchAction({ type: 'downplay', seriesName: dataName});
                     }
                 });
@@ -232,38 +232,6 @@
     <body onLoad="plotOnLoad()">
         <div id="graphDiv" style="width: 100%; height: 600px;"></div>
         <table id="statTable" class="display">
-<!--
-            <thead>
-                <tr>
-                    <th>N</th>
-                    <th>Name</th>
-                    <th>Min</th>
-                    <th>Max</th>
-                    <th>Avg</th>
-                    <th>Count</th>
-                    <th>Style</th>
-                </tr>
-            </thead>
-            <tbody>
--->
-<!---
-                /**{{range $i, $data := .Series -}}**/
-                <tr>
-                    <td></td>
-                    <td>/**{{$data.Name}}**/</td>
-                    <td>/**{{$data.Minimum}}**/</td>
-                    <td>/**{{$data.Maximum}}**/</td>
-                    <td>/**{{$data.Average}}**/</td>
-                    <td>/**{{$data.Count}}**/</td>
-                    <td><select id="style" name="0" onchange="changeStyle(this)">
-                        <option value="marks">marks</option>
-                        <option value="line">line</option>
-                        <option value="line+marks" selected>line+marks</option>
-                    </select></td>
-                </tr>
-                /**{{end}}**/
-			-->
-            </tbody>
         </table>
     </body>
 </html>
