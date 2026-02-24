@@ -29,55 +29,92 @@ const (
 type dataDescription struct {
 	label  string
 	fields []dataField
+	counts []countField
 }
 
-type dataField struct {
+type subField struct {
 	name        string
 	enable      bool
-	isSubName   bool
-	isScale     bool
-	isNeedScale bool
 	description string
 }
 
+type dataField struct {
+	subField
+	isSubName   bool
+	isScale     bool
+	isNeedScale bool
+}
+
+type countField struct {
+	subField
+	counting func(dataEntry) (float64, error)
+}
+
 func getDataDescription() map[entryLabel]dataDescription {
+
+	countCPU := func(data dataEntry) (float64, error) {
+		var err error
+		var scale float64
+		var valueSystem, valueUser float64
+
+		if scale, err = bytesToFloat64(data.points[0]); err != nil {
+			return 0, err
+		}
+		if valueSystem, err = bytesToFloat64(data.points[2]); err != nil {
+			return 0, err
+		}
+		if valueUser, err = bytesToFloat64(data.points[3]); err != nil {
+			return 0, err
+		}
+
+		value := 100 * (valueSystem + valueUser) / (scale * float64(data.interval))
+
+		return value, nil
+	}
+
 	data := map[entryLabel]dataDescription{
 		labelCPUTotal: {
 			label: "CPU(total)",
 			fields: []dataField{
-				{name: "", isScale: true, description: "total number of clock-ticks per second for this machine"},
-				{name: "", description: "number of processors"},
-				{name: "system", isNeedScale: true, description: "consumption for all CPUs in system mode"},
-				{name: "user", enable: true, isNeedScale: true, description: "consumption for all CPUs in user mode"},
-				{name: "user nice", isNeedScale: true, description: "consumption for all CPUs in user mode for niced processes"},
-				{name: "idle", isNeedScale: true, description: "consumption for all CPUs in idle mode"},
-				{name: "wait", isNeedScale: true, description: "consumption for all CPUs in wait mode"},
-				{name: "irq", isNeedScale: true, description: "consumption for all CPUs in irq mode"},
-				{name: "softirq", isNeedScale: true, description: "consumption for all CPUs in softirq mode"},
-				{name: "steal", isNeedScale: true, description: "consumption for all CPUs in steal mode"},
-				{name: "guest", isNeedScale: true, description: "consumption for all CPUs in guest mode overlapping user mode"},
-				{name: "frequency", description: "frequency of all CPUs"},
-				{name: "frequency %", description: "frequency percentage of all CPUs"},
-				{name: "instructions", description: "instructions executed by all CPUs and cycles for all CPUs"},
+				{subField: subField{name: "", description: "total number of clock-ticks per second for this machine"}, isScale: true},
+				{subField: subField{name: "", description: "number of processors"}},
+				{subField: subField{name: "system", description: "consumption for all CPUs in system mode"}, isNeedScale: true},
+				{subField: subField{name: "user", enable: true, description: "consumption for all CPUs in user mode"}, isNeedScale: true},
+				{subField: subField{name: "user nice", description: "consumption for all CPUs in user mode for niced processes"}, isNeedScale: true},
+				{subField: subField{name: "idle", description: "consumption for all CPUs in idle mode"}, isNeedScale: true},
+				{subField: subField{name: "wait", description: "consumption for all CPUs in wait mode"}, isNeedScale: true},
+				{subField: subField{name: "irq", description: "consumption for all CPUs in irq mode"}, isNeedScale: true},
+				{subField: subField{name: "softirq", description: "consumption for all CPUs in softirq mode"}, isNeedScale: true},
+				{subField: subField{name: "steal", description: "consumption for all CPUs in steal mode"}, isNeedScale: true},
+				{subField: subField{name: "guest", description: "consumption for all CPUs in guest mode overlapping user mode"}, isNeedScale: true},
+				{subField: subField{name: "frequency", description: "frequency of all CPUs"}},
+				{subField: subField{name: "frequency %", description: "frequency percentage of all CPUs"}},
+				{subField: subField{name: "instructions", description: "instructions executed by all CPUs and cycles for all CPUs"}},
+			},
+			counts: []countField{
+				{subField: subField{name: "all", enable: true, description: "all"}, counting: countCPU},
 			},
 		},
 		labelCPU: {
 			label: "CPU(core)",
 			fields: []dataField{
-				{name: "", isScale: true, description: "total number of clock-ticks per second for this machine"},
-				{name: "", isSubName: true, description: "processor-number"},
-				{name: "system", isNeedScale: true, description: "consumption for this CPU in system  mode "},
-				{name: "user", enable: true, isNeedScale: true, description: "consumption for this CPU in user mode"},
-				{name: "user nicec", isNeedScale: true, description: "consumption for this CPU in user mode for niced processes"},
-				{name: "idle", isNeedScale: true, description: "consumption for this CPU in idle mode"},
-				{name: "wait", isNeedScale: true, description: "consumption for this CPU in wait mode"},
-				{name: "irq", isNeedScale: true, description: "consumption for this CPU in irq mode"},
-				{name: "softirq", isNeedScale: true, description: "consumption for this CPU in softirq mode (clock-ticks"},
-				{name: "steal", isNeedScale: true, description: "consumption for this CPU in steal mode"},
-				{name: "guest", isNeedScale: true, description: "consumption for this CPU in guest mode overlapping user mode"},
-				{name: "frequency", description: "frequency of this CPU"},
-				{name: "frequency %", description: "frequency percentage of this CPU"},
-				{name: "instructions", description: "instructions executed by this CPU and cycles for this CPU"},
+				{subField: subField{name: "", description: "total number of clock-ticks per second for this machine"}, isScale: true},
+				{subField: subField{name: "", description: "processor-number"}, isSubName: true},
+				{subField: subField{name: "system", description: "consumption for this CPU in system  mode "}, isNeedScale: true},
+				{subField: subField{name: "user", enable: true, description: "consumption for this CPU in user mode"}, isNeedScale: true},
+				{subField: subField{name: "user nicec", description: "consumption for this CPU in user mode for niced processes"}, isNeedScale: true},
+				{subField: subField{name: "idle", description: "consumption for this CPU in idle mode"}, isNeedScale: true},
+				{subField: subField{name: "wait", description: "consumption for this CPU in wait mode"}, isNeedScale: true},
+				{subField: subField{name: "irq", description: "consumption for this CPU in irq mode"}, isNeedScale: true},
+				{subField: subField{name: "softirq", description: "consumption for this CPU in softirq mode (clock-ticks"}, isNeedScale: true},
+				{subField: subField{name: "steal", description: "consumption for this CPU in steal mode"}, isNeedScale: true},
+				{subField: subField{name: "guest", description: "consumption for this CPU in guest mode overlapping user mode"}, isNeedScale: true},
+				{subField: subField{name: "frequency", description: "frequency of this CPU"}},
+				{subField: subField{name: "frequency %", description: "frequency percentage of this CPU"}},
+				{subField: subField{name: "instructions", description: "instructions executed by this CPU and cycles for this CPU"}},
+			},
+			counts: []countField{
+				{subField: subField{name: "all", enable: true, description: "all"}, counting: countCPU},
 			},
 		},
 		labelCPL: {},
@@ -107,28 +144,33 @@ func (obj *dataDescription) getLabel() string {
 	return obj.label
 }
 
-func (obj *dataDescription) getDetails(name string) dataField {
+func (obj *dataDescription) getDetails(name string) subField {
 	for _, field := range obj.fields {
 		if field.name == name {
-			return field
+			return field.subField
 		}
 	}
-	return dataField{}
+	for _, field := range obj.counts {
+		if field.name == name {
+			return field.subField
+		}
+	}
+	return subField{}
 }
 
-func (obj *dataDescription) getSubName(data [][]byte) string {
+func (obj *dataDescription) getSubName(data dataEntry) string {
 
-	length := min(len(data), len(obj.fields))
+	length := min(len(data.points), len(obj.fields))
 	for i := 0; i < length; i++ {
 		if obj.fields[i].isSubName {
-			return string(data[i])
+			return string(data.points[i])
 		}
 	}
 
 	return ""
 }
 
-func (obj *dataDescription) getCounters(interval int64, data [][]byte) ([]struct {
+func (obj *dataDescription) getCounters(data dataEntry) ([]struct {
 	key   string
 	value float64
 }, error) {
@@ -136,7 +178,7 @@ func (obj *dataDescription) getCounters(interval int64, data [][]byte) ([]struct
 	var err error
 	var scale float64 = 1
 
-	length := min(len(data), len(obj.fields))
+	length := min(len(data.points), len(obj.fields))
 	res := make([]struct {
 		key   string
 		value float64
@@ -148,7 +190,7 @@ func (obj *dataDescription) getCounters(interval int64, data [][]byte) ([]struct
 			continue
 		}
 
-		if value, err = bytesToFloat64(data[i]); err != nil {
+		if value, err = bytesToFloat64(data.points[i]); err != nil {
 			return nil, err
 		}
 
@@ -161,13 +203,25 @@ func (obj *dataDescription) getCounters(interval int64, data [][]byte) ([]struct
 		}
 
 		if obj.fields[i].isNeedScale {
-			value = 100 * value / (scale * float64(interval))
+			value = 100 * value / (scale * float64(data.interval))
 		}
 
 		res = append(res, struct {
 			key   string
 			value float64
 		}{obj.fields[i].name, value})
+	}
+	for _, count := range obj.counts {
+		var value float64
+
+		if value, err = count.counting(data); err != nil {
+			return nil, err
+		}
+
+		res = append(res, struct {
+			key   string
+			value float64
+		}{count.name, value})
 	}
 
 	return res, err

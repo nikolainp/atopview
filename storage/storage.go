@@ -141,9 +141,11 @@ func openDB(stroragePath string) (*sql.DB, error) {
 	var err error
 
 	if stroragePath == "" {
-		dataSource = ":memory:?mode=memory&cache=private&nolock=1&psow=1"
+		// dataSource = ":memory:?mode=memory&cache=private&nolock=1&psow=1"
+		dataSource = ":memory:?_journal_mode=WAL&cache=shared"
 	} else {
-		dataSource = "file:" + stroragePath + "?cache=private&nolock=1&psow=1"
+		//		dataSource = "file:" + stroragePath + "?cache=private&nolock=1&psow=1"
+		dataSource = "file:" + stroragePath + "?_journal_mode=WAL&cache=shared"
 	}
 	db, err := sql.Open("sqlite3", dataSource)
 	if err != nil {

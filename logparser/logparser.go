@@ -124,11 +124,11 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 		return fmt.Errorf("label not found")
 	}
 
-	counters, err := desc.getCounters(data.interval, data.points)
+	counters, err := desc.getCounters(data)
 	if err != nil {
 		return err
 	}
-	subName := desc.getSubName(data.points)
+	subName := desc.getSubName(data)
 	for _, counter := range counters {
 
 		id := obj.getCounterID(desc, counter.key, subName)
