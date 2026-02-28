@@ -23,7 +23,10 @@ type DataTransfer interface {
 // Storage ...
 type Storage interface {
 	WriteRow(table string, args ...any)
-	Update(table string, args ...any)
+	Update(table string, args ...any) interface {
+		SetFilter(filter ...string)
+		Execute()
+	}
 	//      SetIdByGroup(table string, column, group string)
 	SelectQuery(table string, columns ...string) interface {
 		SetTimeFilter(struct {

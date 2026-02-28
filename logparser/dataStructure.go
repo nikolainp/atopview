@@ -92,7 +92,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "instructions", description: "instructions executed by all CPUs and cycles for all CPUs"}},
 			},
 			counts: []countField{
-				{subField: subField{name: "all", enable: true, description: "all"}, counting: countCPU},
+				{subField: subField{name: "all", enable: true, description: "system + user"}, counting: countCPU},
 			},
 		},
 		labelCPU: {
@@ -114,7 +114,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "instructions", description: "instructions executed by this CPU and cycles for this CPU"}},
 			},
 			counts: []countField{
-				{subField: subField{name: "all", enable: true, description: "all"}, counting: countCPU},
+				{subField: subField{name: "all", enable: true, description: "system + user"}, counting: countCPU},
 			},
 		},
 		labelCPL: {},

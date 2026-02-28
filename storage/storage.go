@@ -80,42 +80,6 @@ func (obj *Storage) WriteRow(table string, args ...any) {
 	}
 }
 
-// Update ...
-func (obj *Storage) Update(table string, args ...any) {
-
-	fields := make([]any, 0, len(args))
-	values := make([]any, 0, len(args))
-
-	for i := range args {
-		if i%2 == 0 {
-			fields = append(fields, args[i])
-		} else {
-			values = append(values, args[i])
-		}
-	}
-
-	query := obj.metadata.GetUpdateSQL(table, fields...)
-
-	if _, err := obj.db.Exec(query, values...); err != nil {
-
-		qq := "PRAGMA table_list"
-		rows, err := obj.db.Query(qq)
-		if err != nil {
-			panic(fmt.Errorf("\nquery: %s\nerror: %w", query, err))
-		}
-
-		for rows.Next() {
-			var schema, name, ttype string
-			var ncol int
-			var wr, strict bool
-			rows.Scan(&schema, &name, &ttype, &ncol, &wr, &strict)
-
-			fmt.Printf("name: %s\n", name)
-		}
-
-		panic(fmt.Errorf("\nquery: %s\nerror: %w", query, err))
-	}
-}
 
 // func (obj *Storage) SetIdByGroup(table string, column, group string) {
 // 	query := obj.metadata.SetIdByGroup(table, column, group)
@@ -154,6 +118,8 @@ func openDB(stroragePath string) (*sql.DB, error) {
 	if err = db.Ping(); err != nil {
 		return nil, fmt.Errorf("ping storage: %v", err)
 	}
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
 
 	queries := []string{
 		`PRAGMA main.journal_mode = MEMORY`,

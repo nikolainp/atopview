@@ -35,8 +35,9 @@ type webReporter struct {
 	templates *template.Template
 	logger    *log.Logger
 
-	title  string
-	filter *dataFilter
+	title    string
+	filter   *dataFilter
+	mainMenu *navigation
 	counters map[int]string
 
 	port int
@@ -63,6 +64,12 @@ func NewWebReporter(storage *storage.Storage) WebReporter {
 	//obj.title = details.Title
 	//obj.filter = getDataFilter(obj.templates.Lookup("dataFilter.html"))
 	//obj.filter.setTime(details.FirstEventTime, details.LastEventTime)
+	obj.mainMenu = newNavigation(obj.templates.Lookup("mainmenu.html"), []webAnchor{
+		{"/", "data display"},
+		{"/counters", "counters"},
+		{"/information", "system information"},
+		{"/process", "process tree"},
+	})
 
 	obj.srv = http.Server{
 		Handler: obj.getHandlers(),
@@ -112,7 +119,7 @@ func (obj *webReporter) getHandlers() http.Handler {
 	sm := http.NewServeMux()
 
 	sm.HandleFunc("/", obj.rootPage)
-	// sm.HandleFunc("/processes", obj.processes)
+	sm.HandleFunc("/counters", obj.countersPage)
 	// sm.HandleFunc("/performance", obj.performance)
 	// sm.HandleFunc("/performance/{id}", obj.performance)
 	// sm.HandleFunc("/servercontexts", obj.servercontexts)

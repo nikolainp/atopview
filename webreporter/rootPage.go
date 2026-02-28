@@ -24,7 +24,7 @@ func (obj *webReporter) rootPage(w http.ResponseWriter, req *http.Request) {
 		ProcessingSpeed                string
 		FirstEventTime, LastEventTime  string
 		DataFilter                     string
-		Navigation                     string
+		MainMenu                       string
 		Series                         map[int]string
 	}{
 		Title:           obj.title,
@@ -35,7 +35,7 @@ func (obj *webReporter) rootPage(w http.ResponseWriter, req *http.Request) {
 		FirstEventTime:  details.FirstEventTime.Format("2006-01-02 15:04:05"),
 		LastEventTime:   details.LastEventTime.Format("2006-01-02 15:04:05"),
 		//DataFilter:      obj.filter.getContent(req.URL.String()),
-		//Navigation:      obj.navigator.getMainMenu(),
+		MainMenu: obj.mainMenu.getMainMenu("/"),
 		//Processes:       toDataRows(obj.getProcesses()),
 		Series: obj.counters,
 	}

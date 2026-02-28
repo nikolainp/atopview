@@ -79,6 +79,17 @@ func (obj *webReporter) dataSource(w http.ResponseWriter, req *http.Request) {
 		js = obj.getCounterSeries(source)
 	case "statistics":
 		js = obj.getCountersStatistics()
+	case "counters":
+		switch req.Method {
+		case "GET":
+			js = obj.getCountersList()
+		case "POST":
+			id := req.Header.Get("id")
+			enable := req.Header.Get("enable")
+			obj.setCounterEnable(id, enable)
+			obj.logger.Printf("post: %s, %s", id, enable)
+			js = "{ \"response\": \"ok\"}"
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
