@@ -180,7 +180,7 @@ func newEntry(buf []byte) (res dataEntry, err error) {
 	// 4- time (time of this interval in format HH:MM:SS), and
 	// 5 - interval (number of seconds elapsed for this interval).
 
-	res.label = getEntryLabel(bufSlice[0])
+	res.label = getEntryLabel(bufSlice)
 	if res.label == labelNONE {
 		err = fmt.Errorf("Unknown label type")
 		return
@@ -200,8 +200,8 @@ func newEntry(buf []byte) (res dataEntry, err error) {
 	return
 }
 
-func getEntryLabel(buf []byte) entryLabel {
-	switch string(buf) {
+func getEntryLabel(buf [][]byte) entryLabel {
+	switch string(buf[0]) {
 	case "RESET":
 		return labelRESET
 	case "SEP":
@@ -229,7 +229,10 @@ func getEntryLabel(buf []byte) entryLabel {
 	case "NFS":
 		return labelNFS
 	case "NET":
-		return labelNET
+		if string(buf[6]) == "upper" {
+			return labelNET1
+		}
+		return labelNET2
 	case "PRG":
 		return labelPRG
 	case "NUM":

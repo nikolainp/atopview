@@ -9,7 +9,6 @@ import (
 
 func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
 
-	obj.counters = obj.listCounters()
 	details := obj.getRootDetails()
 
 	data := struct {
@@ -103,8 +102,17 @@ func (obj *webReporter) getCountersList() string {
 
 func (obj *webReporter) setCounterEnable(id, enable string) {
 
-	update := obj.storage.Update("counters", "enable", enable)
-	update.SetFilter("id = ?", id)
+	var argEnable bool
+
+	switch enable {
+	case "true":
+		argEnable = true
+	case "false":
+		argEnable = false
+	}
+
+	update := obj.storage.Update("counters", "enable", argEnable)
+	update.SetFilter(fmt.Sprintf("id = %s", id))
 	update.Execute()
 
 }
