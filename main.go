@@ -70,6 +70,8 @@ func main() {
 		// monitor.Start("Save data: parts: %[1]d/%[2]d time: %[5]s")
 		monitor.Stop()
 		storage.FlushAll(conf.PathStorage)
+
+		// FIXME завершение при ошибке
 	} else {
 		if storage, err = getOldStorage(conf.PathStorage); err != nil {
 			return

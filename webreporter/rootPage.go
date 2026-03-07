@@ -87,6 +87,9 @@ func (obj *webReporter) listCounters() map[int]string {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// TODO управление маштабом
+
+
 func (obj *webReporter) getCounterSeries(id string) string {
 
 	rows := make([]string, 0)

@@ -1,5 +1,7 @@
 package logparser
 
+import "fmt"
+
 type entryLabel int
 
 const (
@@ -32,6 +34,8 @@ type dataDescription struct {
 	fields []dataField
 	counts []countField
 	scale  func(value float64, intetrval int64, scale float64) float64
+	// TODO правильный PID с учётом переиспользования
+	subName func(dataEntry) string
 }
 
 type subField struct {
@@ -45,6 +49,7 @@ type dataField struct {
 	isSubName   bool
 	isScale     bool
 	isNeedScale bool
+	// TODO время на середину интервала для счетчиков cpu, disk, ...
 }
 
 type countField struct {
@@ -73,6 +78,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 
 		return value, nil
 	}
+	pidList := newPidList()
 
 	data := map[entryLabel]dataDescription{
 		labelCPUTotal: {
@@ -374,6 +380,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "end time (epoch or 0 if still active)"}},
 				{subField: subField{name: "", description: "number of threads in state 'idle' (I)"}},
 			},
+			subName: pidList.getProgrammPid,
 		},
 		labelPRC: {
 			label: "Process",
@@ -400,6 +407,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "number of voluntary context switches"}},
 				{subField: subField{name: "", description: "number of involuntary context switches"}},
 			},
+			subName: pidList.getProcessPid,
 		},
 		labelPRE: {
 			label: "Process(GPU)",
@@ -415,6 +423,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "memory occupation (KiB) at this moment cumulative memory occupation (KiB) during interval, "}},
 				{subField: subField{name: "", description: "number of samples taken during interval"}},
 			},
+			subName: pidList.getProcessPid,
 		},
 		labelPRM: {
 			label: "Process(Memory)",
@@ -443,6 +452,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "cgroup v2 'memory.swap.max' in KiB (-3 means no cgroup v2 support, -2 means undefined and -1 means maximum)"}},
 				{subField: subField{name: "", description: "cgroup  v2  most restrictive 'memory.swap.max' in upper directories in KiB (-3 means no cgroup v2 support, -2 means undefined and -1 means maximum)"}},
 			},
+			subName: pidList.getProcessPid,
 		},
 		labelPRD: {
 			label: "Process(Disk)",
@@ -460,6 +470,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "obsoleted value ('n')"}},
 				{subField: subField{name: "", description: "is_process (y/n)"}},
 			},
+			subName: pidList.getProcessPid,
 		},
 		labelPRN: {
 			label: "Process(Net)",
@@ -481,6 +492,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "TGID (group number of related tasks/threads)"}},
 				{subField: subField{name: "", description: "is_process (y/n)"}},
 			},
+			subName: pidList.getProcessPid,
 		},
 	}
 
@@ -509,11 +521,16 @@ func (obj *dataDescription) getDetails(name string) subField {
 
 func (obj *dataDescription) getSubName(data dataEntry) string {
 
-	length := min(len(data.points), len(obj.fields))
-	for i := 0; i < length; i++ {
-		if obj.fields[i].isSubName {
-			return string(data.points[i])
+	if obj.subName == nil {
+		length := min(len(data.points), len(obj.fields))
+		for i := 0; i < length; i++ {
+			if obj.fields[i].isSubName {
+				return string(data.points[i])
+			}
 		}
+	} else {
+		return obj.subName(data)
+
 	}
 
 	return ""
@@ -539,7 +556,7 @@ func (obj *dataDescription) getCounters(data dataEntry) ([]struct {
 		if field.isSubName {
 			continue
 		}
-		if field.name == "" && !field.isScale{
+		if field.name == "" && !field.isScale {
 			continue
 		}
 
@@ -582,4 +599,46 @@ func (obj *dataDescription) getCounters(data dataEntry) ([]struct {
 
 func (obj *dataDescription) getProperties([][]byte) {
 
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+type pidList struct {
+	data map[string]int
+}
+
+func newPidList() *pidList {
+	obj := new(pidList)
+
+	obj.data = make(map[string]int)
+
+	return obj
+}
+
+func (obj *pidList) getProgrammPid(entry dataEntry) string {
+	//  9 - start time (epoch)
+	// 26 - "indication if the task is newly started during this interval ('N')"
+	pid := string(entry.points[0])
+	if id, ok := obj.data[pid]; ok {
+
+		if string(entry.points[25]) == "N" {
+			id++
+			obj.data[pid] = id
+		}
+
+		return fmt.Sprintf("%s_%d", pid, id)
+	}
+	obj.data[pid] = 1
+
+	return fmt.Sprintf("%s_1", pid)
+}
+
+func (obj *pidList) getProcessPid(entry dataEntry) string {
+	pid := string(entry.points[0])
+	if id, ok := obj.data[pid]; ok {
+		return fmt.Sprintf("%s_%d", pid, id)
+	}
+	obj.data[pid] = 1
+
+	return fmt.Sprintf("%s_1", pid)
 }

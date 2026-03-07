@@ -139,6 +139,11 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 		obj.storage.WriteRow("dataPoints", data.timeStamp, id, counter.value)
 	}
 
+	// TODO детали загрузки
+	// TODO параметры компьютера
+	// TODO параметры процесса
+	// TODO счётчики по всем процессам - число зомби, число процессов этого типа, ждущих процессов,новых/старых/завершившихся
+
 	return nil
 }
 
@@ -188,6 +193,7 @@ func newEntry(buf []byte) (res dataEntry, err error) {
 	if res.label == labelRESET || res.label == labelSEP {
 		return
 	}
+
 	res.computer = string(bufSlice[1])
 	if res.timeStamp, err = bytesToTime(bufSlice[2]); err != nil {
 		return
@@ -195,7 +201,28 @@ func newEntry(buf []byte) (res dataEntry, err error) {
 	if res.interval, err = bytesToInt64(bufSlice[5]); err != nil {
 		return
 	}
-	res.points = bufSlice[6:]
+
+	if bytes.ContainsRune(buf, '(') {
+
+		res.points = make([][]byte, 0, len(bufSlice)-6)
+		var start int
+		for i, word := range bufSlice[6:] {
+			switch {
+			case word[0] == '(' && word[len(word)-1] == ')':
+				res.points = append(res.points, bytes.Trim(word, "()"))
+			case word[0] == '(':
+				start = i
+			case word[len(word)-1] == ')':
+				res.points = append(res.points, bytes.Trim(
+					bytes.Join(bufSlice[start+6:i+7], []byte(" ")), "()"))
+			default:
+				res.points = append(res.points, word)
+			}
+		}
+
+	} else {
+		res.points = bufSlice[6:]
+	}
 
 	return
 }
@@ -206,6 +233,13 @@ func getEntryLabel(buf [][]byte) entryLabel {
 		return labelRESET
 	case "SEP":
 		return labelSEP
+	}
+
+	if len(buf) < 6 {
+		return labelNONE
+	}
+
+	switch string(buf[0]) {
 	case "CPU":
 		return labelCPUTotal
 	case "cpu":
@@ -245,8 +279,8 @@ func getEntryLabel(buf [][]byte) entryLabel {
 		return labelPRD
 	case "PRN":
 		return labelPRN
-
 	}
+
 	return labelNONE
 }
 

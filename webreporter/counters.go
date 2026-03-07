@@ -74,6 +74,12 @@ func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// TODO сброс всех выделенных
+// TODO фильтрация по копмьютеру
+// TODO фильтрация по процессу
+// TODO фильтрация по типу процесса (кластер, вебсервер, СУБД)
+// TODO сортировка групп
+
 func (obj *webReporter) getCountersList() string {
 
 	rows := make([]string, 0)
