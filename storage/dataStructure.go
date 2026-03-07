@@ -26,6 +26,7 @@ func getDataStructure() map[string]metaTable {
 		"counters": {name: "counters",
 			columns: []metaColumn{
 				{name: "id", datatype: "INTEGER"},
+				{name: "system", datatype: "BOLLEAN"},
 				{name: "enable", datatype: "BOOLEAN"},
 				{name: "fullName", datatype: "TEXT"},
 				{name: "computer", datatype: "INTEGER"},

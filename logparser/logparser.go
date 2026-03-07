@@ -158,7 +158,10 @@ func (obj *logParser) getCounterID(desc dataDescription, name, subName string) i
 	id := len(obj.counterID) + 1
 	details := desc.getDetails(name)
 
-	obj.storage.WriteRow("counters", id, details.enable, longName, obj.computerID, label, name, subName, details.description)
+	obj.storage.WriteRow("counters", id,
+		desc.isSystem, details.enable,
+		longName, obj.computerID, label, name, subName,
+		details.description)
 	obj.counterID[longName] = id
 
 	return id
@@ -206,16 +209,19 @@ func newEntry(buf []byte) (res dataEntry, err error) {
 
 		res.points = make([][]byte, 0, len(bufSlice)-6)
 		var start int
+		var isParenthesis bool
 		for i, word := range bufSlice[6:] {
 			switch {
-			case word[0] == '(' && word[len(word)-1] == ')':
+			case !isParenthesis && word[0] == '(' && word[len(word)-1] == ')':
 				res.points = append(res.points, bytes.Trim(word, "()"))
-			case word[0] == '(':
+			case !isParenthesis && word[0] == '(':
+				isParenthesis = true
 				start = i
-			case word[len(word)-1] == ')':
+			case isParenthesis && word[len(word)-1] == ')':
+				isParenthesis = false
 				res.points = append(res.points, bytes.Trim(
 					bytes.Join(bufSlice[start+6:i+7], []byte(" ")), "()"))
-			default:
+			case !isParenthesis:
 				res.points = append(res.points, word)
 			}
 		}

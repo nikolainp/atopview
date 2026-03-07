@@ -30,12 +30,12 @@ const (
 )
 
 type dataDescription struct {
-	label  string
-	fields []dataField
-	counts []countField
-	scale  func(value float64, intetrval int64, scale float64) float64
-	// TODO правильный PID с учётом переиспользования
-	subName func(dataEntry) string
+	label    string
+	isSystem bool
+	fields   []dataField
+	counts   []countField
+	scale    func(value float64, intetrval int64, scale float64) float64
+	subName  func(dataEntry) string
 }
 
 type subField struct {
@@ -82,7 +82,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 
 	data := map[entryLabel]dataDescription{
 		labelCPUTotal: {
-			label: "CPU(total)",
+			label: "CPU(total)", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "total number of clock-ticks per second for this machine"}, isScale: true},
 				{subField: subField{name: "", description: "number of processors"}},
@@ -107,7 +107,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelCPU: {
-			label: "CPU(core)",
+			label: "CPU(core)", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "total number of clock-ticks per second for this machine"}, isScale: true},
 				{subField: subField{name: "", description: "processor-number"}, isSubName: true},
@@ -141,7 +141,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			// number  of  context-switches, and
 			// number of device interrupts.
 
-			label: "CPU Load",
+			label: "CPU Load", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "nCPU", description: "number of processors"}},
 				{subField: subField{name: "avg1", description: "averaged over 1 minutes"}},
@@ -157,7 +157,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			// MEM chuwi 1771751090 2026/02/22 12:04:50 426 4096 2994813 438952 1320946 54598 151386 2033 79858 0 280040 0 0 2097152 0 0 0 0 0 86 66 19251 1073741824 0 0 1503911 0
 			// MEM chuwi 1771766468 2026/02/22 16:21:08 607762 4096 2994813 424679 1321638 54646 151624 1840 79858 0 280626 0 0 2097152 0 0 0 0 0 86 66 19758 1073741824 0 0 1489792 0
 
-			label: "Memory",
+			label: "Memory", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "page size for this machine (in bytes)"}, isScale: true},
 				{subField: subField{name: "physical", description: "size of physical memory (in bytes)"}, isNeedScale: true},
@@ -188,7 +188,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelSWP: {
-			label: "Swap",
+			label: "Swap", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "page  size  for  this machine (in bytes)"}, isScale: true},
 				{subField: subField{name: "swap", description: "size of swap (in bytes)"}, isNeedScale: true},
@@ -202,7 +202,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelPAG: {
-			label: "Page",
+			label: "Page", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "page size for this machine (in bytes)"}, isScale: true},
 				{subField: subField{name: "pageScans", description: "number of page scans"}},
@@ -221,7 +221,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelPSI: {
-			label: "Pressure Stall",
+			label: "Pressure Stall", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "PSI statistics present on this system (n or y)"}},
 				{subField: subField{name: "", description: "CPU some avg10"}},
@@ -247,7 +247,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelDSK: {
-			label: "Disk",
+			label: "Disk", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "name"}, isSubName: true},
 				{subField: subField{name: "ios", description: "number of milliseconds spent for I/O"}},
@@ -262,7 +262,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelNFC: {
-			label: "Network Filesystem (client)",
+			label: "Network Filesystem (client)", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "RPC", description: "number of transmitted RPCs"}},
 				{subField: subField{name: "readRPC", description: "number of transmitted read RPCs "}},
@@ -272,7 +272,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelNFS: {
-			label: "Network Filesystem (server)",
+			label: "Network Filesystem (server)", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "RPC", description: "number of handled RPCs"}},
 				{subField: subField{name: "readRPC", description: "number of received read RPCs"}},
@@ -294,7 +294,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 		labelNET1: {
 			// NET chuwi 1771749462 2026/02/22 11:37:42 600
 			// 1-upper 2-14032 3-8538 4-2307 5-1618 6-16921 7-10824 8-16921 9-0 10-0 11-8 12-98 13-0 14-15 15-187 16-1 17-46 18-0
-			label: "NET(total)",
+			label: "NET(total)", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "the verb \"upper\""}},
 				{subField: subField{name: "recvTCP", description: "number of packets received by TCP"}},
@@ -317,7 +317,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelNET2: {
-			label: "NET",
+			label: "NET", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "name of the interface"}, isSubName: true},
 				{subField: subField{name: "recvPackets", description: "number of packets received by the interface"}},
@@ -329,7 +329,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelNUM: {
-			label: "NUMA",
+			label: "NUMA", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "NUMA  node  number"}, isSubName: true},
 				{subField: subField{name: "", description: "page size for this machine (in bytes)"}, isScale: true},
@@ -348,7 +348,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			},
 		},
 		labelPRG: {
-			label: "Programm",
+			label: "Program", isSystem: false,
 			fields: []dataField{
 				{subField: subField{name: "", description: "PID (unique ID of task),"}},
 				{subField: subField{name: "", description: "name (between parenthesis or underscores for spaces)"}},
@@ -356,14 +356,14 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "real uid"}},
 				{subField: subField{name: "", description: "real gid"}},
 				{subField: subField{name: "", description: "TGID (group number of related tasks/threads)"}},
-				{subField: subField{name: "", description: "total number of threads"}},
+				{subField: subField{name: "threads", description: "total number of threads"}},
 				{subField: subField{name: "", description: "exit code (in case of fatal signal: signal number + 256)"}},
 				{subField: subField{name: "", description: "start time (epoch)"}},
 				{subField: subField{name: "", description: "full command line  (between  parenthesis  or underscores for spaces)"}},
 				{subField: subField{name: "", description: "PPID"}},
-				{subField: subField{name: "", description: "number of threads in state 'running' (R)"}},
-				{subField: subField{name: "", description: "number of threads in state 'interruptible sleeping' (S)"}},
-				{subField: subField{name: "", description: "number of threads in state 'uninterruptible sleeping' (D)"}},
+				{subField: subField{name: "threadsRun", description: "number of threads in state 'running' (R)"}},
+				{subField: subField{name: "threadsSleep", description: "number of threads in state 'interruptible sleeping' (S)"}},
+				{subField: subField{name: "threadsDead", description: "number of threads in state 'uninterruptible sleeping' (D)"}},
 				{subField: subField{name: "", description: "effective uid"}},
 				{subField: subField{name: "", description: "effective gid"}},
 				{subField: subField{name: "", description: "saved uid"}},
@@ -378,12 +378,12 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "indication if the task is newly started during this interval ('N')"}},
 				{subField: subField{name: "", description: "cgroup v2 path name (between parenthesis or underscores for spaces)"}},
 				{subField: subField{name: "", description: "end time (epoch or 0 if still active)"}},
-				{subField: subField{name: "", description: "number of threads in state 'idle' (I)"}},
+				{subField: subField{name: "threadIdle", description: "number of threads in state 'idle' (I)"}},
 			},
 			subName: pidList.getProgrammPid,
 		},
 		labelPRC: {
-			label: "Process",
+			label: "Process", isSystem: false,
 			fields: []dataField{
 				{subField: subField{name: "", description: "PID"}},
 				{subField: subField{name: "", description: "name (between parenthesis or underscores for spaces)"}},
@@ -410,7 +410,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			subName: pidList.getProcessPid,
 		},
 		labelPRE: {
-			label: "Process(GPU)",
+			label: "Process(GPU)", isSystem: false,
 			fields: []dataField{
 				{subField: subField{name: "", description: "PID"}},
 				{subField: subField{name: "", description: "name (between parenthesis or underscores for spaces)"}},
@@ -426,7 +426,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			subName: pidList.getProcessPid,
 		},
 		labelPRM: {
-			label: "Process(Memory)",
+			label: "Process(Memory)", isSystem: false,
 			fields: []dataField{
 				{subField: subField{name: "", description: "PID"}},
 				{subField: subField{name: "", description: "name (between parenthesis or underscores for spaces)"}},
@@ -455,7 +455,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			subName: pidList.getProcessPid,
 		},
 		labelPRD: {
-			label: "Process(Disk)",
+			label: "Process(Disk)", isSystem: false,
 			fields: []dataField{
 				{subField: subField{name: "", description: "PID"}},
 				{subField: subField{name: "", description: "name (between parenthesis or underscores for spaces)"}},
@@ -473,7 +473,7 @@ func getDataDescription() map[entryLabel]dataDescription {
 			subName: pidList.getProcessPid,
 		},
 		labelPRN: {
-			label: "Process(Net)",
+			label: "Process(Net)", isSystem: false,
 			fields: []dataField{
 				{subField: subField{name: "", description: "PID"}},
 				{subField: subField{name: "", description: "name (between parenthesis or underscores for spaces)"}},
@@ -576,10 +576,12 @@ func (obj *dataDescription) getCounters(data dataEntry) ([]struct {
 			}
 		}
 
-		res = append(res, struct {
-			key   string
-			value float64
-		}{obj.fields[i].name, value})
+		if field.name != "" {
+			res = append(res, struct {
+				key   string
+				value float64
+			}{field.name, value})
+		}
 	}
 	for _, count := range obj.counts {
 		var value float64
@@ -604,13 +606,13 @@ func (obj *dataDescription) getProperties([][]byte) {
 ///////////////////////////////////////////////////////////////////////////////
 
 type pidList struct {
-	data map[string]int
+	data map[string]string
 }
 
 func newPidList() *pidList {
 	obj := new(pidList)
 
-	obj.data = make(map[string]int)
+	obj.data = make(map[string]string)
 
 	return obj
 }
@@ -619,26 +621,25 @@ func (obj *pidList) getProgrammPid(entry dataEntry) string {
 	//  9 - start time (epoch)
 	// 26 - "indication if the task is newly started during this interval ('N')"
 	pid := string(entry.points[0])
-	if id, ok := obj.data[pid]; ok {
+	startTime := string(entry.points[8])
 
-		if string(entry.points[25]) == "N" {
-			id++
-			obj.data[pid] = id
+	if oldStartTime, ok := obj.data[pid]; ok {
+		if startTime != oldStartTime {
+			obj.data[pid] = startTime
 		}
-
-		return fmt.Sprintf("%s_%d", pid, id)
+	} else {
+		obj.data[pid] = startTime
 	}
-	obj.data[pid] = 1
 
-	return fmt.Sprintf("%s_1", pid)
+	return fmt.Sprintf("%s_%s", pid, startTime)
 }
 
 func (obj *pidList) getProcessPid(entry dataEntry) string {
 	pid := string(entry.points[0])
-	if id, ok := obj.data[pid]; ok {
-		return fmt.Sprintf("%s_%d", pid, id)
+	if startTime, ok := obj.data[pid]; ok {
+		return fmt.Sprintf("%s_%s", pid, startTime)
 	}
-	obj.data[pid] = 1
+	obj.data[pid] = ""
 
-	return fmt.Sprintf("%s_1", pid)
+	return fmt.Sprintf("%s_0", pid)
 }

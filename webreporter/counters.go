@@ -88,6 +88,7 @@ func (obj *webReporter) getCountersList() string {
 		"label", "name", "subName", "description")
 	// 	//details.SetTimeFilter(obj.filter.getData())
 	// 	details.SetFilter("counter = ?", id)
+	details.SetFilter("system = TRUE")
 	details.SetOrder("label")
 
 	var id int64

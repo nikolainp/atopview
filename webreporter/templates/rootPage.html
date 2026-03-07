@@ -27,12 +27,12 @@
 				    graphChart.hideLoading();
     				graphChart.setOption(graphOptions);
 
-					plotColors = graphChart.getModel().getSeries().map(s => {
-                    	return {
-                        	seriesIndex: s.seriesIndex,
-                        	seriesColor: graphChart.getVisual({seriesIndex: s.	seriesIndex}, 'color')
-                    	}
-                	});
+					plotColors = new Map(graphChart.getModel().getSeries().map(s => {
+                    	return [
+                        	s.name,
+                        	graphChart.getVisual({seriesIndex: s.	seriesIndex}, 'color')
+                        ]
+                	}));
 					plotTable();
 				});
             }
@@ -160,7 +160,7 @@
                         {
                             "targets": 0,
                             "createdCell": function (td, cellData, rowData, row, col) {
-                                 $(td).css('background-color', plotColors[row].seriesColor);
+                                 $(td).css('background-color', plotColors.get(rowData.Name));
                             },
                             'render': function(data, type, full, meta) {
                                 if (data === "enable" || data === true) {

@@ -87,8 +87,7 @@ func (obj *webReporter) listCounters() map[int]string {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// TODO управление маштабом
-
+// TODO управление маштабом в счётчиках
 
 func (obj *webReporter) getCounterSeries(id string) string {
 
@@ -119,7 +118,7 @@ func (obj *webReporter) getCountersStatistics() string {
 	var cMin, cMax, cAvg, cCount float64
 
 	details := obj.storage.SelectQuery("dataPoints", "counter",
-		"MIN(value)", "AVG(value)", "MAX(value), COUNT(*)",
+		"MIN(value)", "MAX(value)", "AVG(value), COUNT(*)",
 	)
 	//details.SetTimeFilter(obj.filter.getData())
 	details.SetFilter("counter IN (SELECT id FROM counters WHERE enable = TRUE)")

@@ -66,9 +66,9 @@ func NewWebReporter(storage *storage.Storage) WebReporter {
 	//obj.filter.setTime(details.FirstEventTime, details.LastEventTime)
 	obj.mainMenu = newNavigation(obj.templates.Lookup("mainmenu.html"), []webAnchor{
 		{"/", "data display"},
-		{"/counters", "counters"},
+		{"/counters", "system counters"},
 		{"/information", "system information"},
-		{"/process", "process tree"},
+		{"/processes", "processes counters"},
 	})
 
 	obj.srv = http.Server{
