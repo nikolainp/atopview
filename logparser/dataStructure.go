@@ -46,9 +46,13 @@ type subField struct {
 
 type dataField struct {
 	subField
+
+	isCounter   bool
+	isProperty  bool
 	isSubName   bool
 	isScale     bool
 	isNeedScale bool
+
 	// TODO время на середину интервала для счетчиков cpu, disk, ...
 }
 
@@ -85,19 +89,32 @@ func getDataDescription() map[entryLabel]dataDescription {
 			label: "CPU(total)", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "total number of clock-ticks per second for this machine"}, isScale: true},
-				{subField: subField{name: "", description: "number of processors"}},
-				{subField: subField{name: "system", description: "consumption for all CPUs in system mode"}, isNeedScale: true},
-				{subField: subField{name: "user", enable: true, description: "consumption for all CPUs in user mode"}, isNeedScale: true},
-				{subField: subField{name: "user nice", description: "consumption for all CPUs in user mode for niced processes"}, isNeedScale: true},
-				{subField: subField{name: "idle", description: "consumption for all CPUs in idle mode"}, isNeedScale: true},
-				{subField: subField{name: "wait", description: "consumption for all CPUs in wait mode"}, isNeedScale: true},
-				{subField: subField{name: "irq", description: "consumption for all CPUs in irq mode"}, isNeedScale: true},
-				{subField: subField{name: "softirq", description: "consumption for all CPUs in softirq mode"}, isNeedScale: true},
-				{subField: subField{name: "steal", description: "consumption for all CPUs in steal mode"}, isNeedScale: true},
-				{subField: subField{name: "guest", description: "consumption for all CPUs in guest mode overlapping user mode"}, isNeedScale: true},
-				{subField: subField{name: "frequency", description: "frequency of all CPUs"}},
-				{subField: subField{name: "frequency %", description: "frequency percentage of all CPUs"}},
-				{subField: subField{name: "instructions", description: "instructions executed by all CPUs and cycles for all CPUs"}},
+				{subField: subField{name: "processors", description: "number of processors"},
+					isProperty: true},
+				{subField: subField{name: "system", description: "consumption for all CPUs in system mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "user", enable: true, description: "consumption for all CPUs in user mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "user nice", description: "consumption for all CPUs in user mode for niced processes"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "idle", description: "consumption for all CPUs in idle mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "wait", description: "consumption for all CPUs in wait mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "irq", description: "consumption for all CPUs in irq mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "softirq", description: "consumption for all CPUs in softirq mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "steal", description: "consumption for all CPUs in steal mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "guest", description: "consumption for all CPUs in guest mode overlapping user mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "frequency", description: "frequency of all CPUs"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "frequency %", description: "frequency percentage of all CPUs"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "instructions", description: "instructions executed by all CPUs and cycles for all CPUs"},
+					isCounter: true},
 			},
 			counts: []countField{
 				{subField: subField{name: "all", enable: true, description: "system + user"}, counting: countCPU},
@@ -111,18 +128,30 @@ func getDataDescription() map[entryLabel]dataDescription {
 			fields: []dataField{
 				{subField: subField{name: "", description: "total number of clock-ticks per second for this machine"}, isScale: true},
 				{subField: subField{name: "", description: "processor-number"}, isSubName: true},
-				{subField: subField{name: "system", description: "consumption for this CPU in system  mode "}, isNeedScale: true},
-				{subField: subField{name: "user", enable: true, description: "consumption for this CPU in user mode"}, isNeedScale: true},
-				{subField: subField{name: "user nicec", description: "consumption for this CPU in user mode for niced processes"}, isNeedScale: true},
-				{subField: subField{name: "idle", description: "consumption for this CPU in idle mode"}, isNeedScale: true},
-				{subField: subField{name: "wait", description: "consumption for this CPU in wait mode"}, isNeedScale: true},
-				{subField: subField{name: "irq", description: "consumption for this CPU in irq mode"}, isNeedScale: true},
-				{subField: subField{name: "softirq", description: "consumption for this CPU in softirq mode (clock-ticks"}, isNeedScale: true},
-				{subField: subField{name: "steal", description: "consumption for this CPU in steal mode"}, isNeedScale: true},
-				{subField: subField{name: "guest", description: "consumption for this CPU in guest mode overlapping user mode"}, isNeedScale: true},
-				{subField: subField{name: "frequency", description: "frequency of this CPU"}},
-				{subField: subField{name: "frequency %", description: "frequency percentage of this CPU"}},
-				{subField: subField{name: "instructions", description: "instructions executed by this CPU and cycles for this CPU"}},
+				{subField: subField{name: "system", description: "consumption for this CPU in system  mode "},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "user", enable: true, description: "consumption for this CPU in user mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "user nicec", description: "consumption for this CPU in user mode for niced processes"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "idle", description: "consumption for this CPU in idle mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "wait", description: "consumption for this CPU in wait mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "irq", description: "consumption for this CPU in irq mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "softirq", description: "consumption for this CPU in softirq mode (clock-ticks"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "steal", description: "consumption for this CPU in steal mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "guest", description: "consumption for this CPU in guest mode overlapping user mode"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "frequency", description: "frequency of this CPU"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "frequency %", description: "frequency percentage of this CPU"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "instructions", description: "instructions executed by this CPU and cycles for this CPU"},
+					isCounter: true},
 			},
 			counts: []countField{
 				{subField: subField{name: "all", enable: true, description: "system + user"}, counting: countCPU},
@@ -144,11 +173,16 @@ func getDataDescription() map[entryLabel]dataDescription {
 			label: "CPU Load", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "nCPU", description: "number of processors"}},
-				{subField: subField{name: "avg1", description: "averaged over 1 minutes"}},
-				{subField: subField{name: "avg5", description: "averaged over 5 minutes "}},
-				{subField: subField{name: "avg15", description: "averaged over 15 minutes"}},
-				{subField: subField{name: "cws", description: "number of context switches"}},
-				{subField: subField{name: "intr", description: "number of device interrupts"}},
+				{subField: subField{name: "avg1", description: "averaged over 1 minutes"},
+					isCounter: true},
+				{subField: subField{name: "avg5", description: "averaged over 5 minutes "},
+					isCounter: true},
+				{subField: subField{name: "avg15", description: "averaged over 15 minutes"},
+					isCounter: true},
+				{subField: subField{name: "cws", description: "number of context switches"},
+					isCounter: true},
+				{subField: subField{name: "intr", description: "number of device interrupts"},
+					isCounter: true},
 			},
 		},
 		labelMEM: {
@@ -159,65 +193,111 @@ func getDataDescription() map[entryLabel]dataDescription {
 
 			label: "Memory", isSystem: true,
 			fields: []dataField{
-				{subField: subField{name: "", description: "page size for this machine (in bytes)"}, isScale: true},
-				{subField: subField{name: "physical", description: "size of physical memory (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "free", enable: true, description: "size of free memory (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "cache", description: "size of page cache (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "bufferCache", description: "size of buffer cache (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "slab", description: "size of slab (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "dirty", description: "dirty pages in cache (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "reclaimableSlab", description: "reclaimable part of slab (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "vmwareBalloon", description: "total size of vmware's balloon pages (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "shared", description: "total size of shared memory (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "residentShared", description: "size of resident shared memory (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "swappedShared", description: "size of swapped shared memory (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "smallerHugePage", description: "smaller huge page size (in bytes)"}},
-				{subField: subField{name: "totalSizeSmallerHugePage", description: "total size of smaller huge pages (huge pages)"}},
-				{subField: subField{name: "freeSmallerHugePage", description: "size of free smaller huge pages (huge pages)"}},
-				{subField: subField{name: "ARC", description: "size of ARC (cache) of ZFSonlinux (in bytes)"}},
-				{subField: subField{name: "sharingKSM", description: "size of sharing pages for KSM (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "sharedKSM", description: "size of shared pages for KSM (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "TCP", description: "size of memory used for TCP sockets (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "UDP", description: "size of memory used for UDP sockets (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "pagetables", description: "size of pagetables (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "largerHugePage", description: "larger huge page size (in bytes)"}},
-				{subField: subField{name: "totalLargerHugePage", description: "total size of larger huge pages (huge pages)"}},
-				{subField: subField{name: "freeLargerHugePage", description: "size of free larger huge pages (huge pages)"}},
-				{subField: subField{name: "available", enable: true, description: "size of available memory (in bytes) for new workloads without swapping"}, isNeedScale: true},
-				{subField: subField{name: "anonymousHugePages", description: "size of anonymous transparent huge pages (in bytes)"}, isNeedScale: true},
+				{subField: subField{name: "pageSize", description: "page size for this machine (in bytes)"},
+					isProperty: true, isScale: true},
+				{subField: subField{name: "physical", description: "size of physical memory (in bytes)"},
+					isProperty: true, isNeedScale: true},
+				{subField: subField{name: "free", enable: true, description: "size of free memory (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "cache", description: "size of page cache (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "bufferCache", description: "size of buffer cache (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "slab", description: "size of slab (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "dirty", description: "dirty pages in cache (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "reclaimableSlab", description: "reclaimable part of slab (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "vmwareBalloon", description: "total size of vmware's balloon pages (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "shared", description: "total size of shared memory (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "residentShared", description: "size of resident shared memory (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "swappedShared", description: "size of swapped shared memory (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "smallerHugePage", description: "smaller huge page size (in bytes)"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "totalSizeSmallerHugePage", description: "total size of smaller huge pages (huge pages)"},
+					isCounter: true},
+				{subField: subField{name: "freeSmallerHugePage", description: "size of free smaller huge pages (huge pages)"},
+					isCounter: true},
+				{subField: subField{name: "ARC", description: "size of ARC (cache) of ZFSonlinux (in bytes)"},
+					isCounter: true},
+				{subField: subField{name: "sharingKSM", description: "size of sharing pages for KSM (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "sharedKSM", description: "size of shared pages for KSM (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "TCP", description: "size of memory used for TCP sockets (in bytes)"},
+					isCounter: true, isProperty: true, isNeedScale: true},
+				{subField: subField{name: "UDP", description: "size of memory used for UDP sockets (in bytes)"},
+					isCounter: true, isProperty: true, isNeedScale: true},
+				{subField: subField{name: "pagetables", description: "size of pagetables (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "largerHugePage", description: "larger huge page size (in bytes)"},
+					isCounter: true},
+				{subField: subField{name: "totalLargerHugePage", description: "total size of larger huge pages (huge pages)"},
+					isCounter: true},
+				{subField: subField{name: "freeLargerHugePage", description: "size of free larger huge pages (huge pages)"},
+					isCounter: true},
+				{subField: subField{name: "available", enable: true, description: "size of available memory (in bytes) for new workloads without swapping"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "anonymousHugePages", description: "size of anonymous transparent huge pages (in bytes)"},
+					isCounter: true, isNeedScale: true},
 			},
 		},
 		labelSWP: {
 			label: "Swap", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "page  size  for  this machine (in bytes)"}, isScale: true},
-				{subField: subField{name: "swap", description: "size of swap (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "freeSwap", enable: true, description: "size of free swap (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "cacheSwap", description: "size of swap cache (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "committed", description: "size of committed space (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "committedLimit", description: "limit for committed space (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "sizeSwap", description: "size of the swap cache (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "realZswap", description: "real (decompressed) size of the pages stored in zswap (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "storageZswap", description: "size of compressed storage used for zswap (in bytes)"}, isNeedScale: true},
+				{subField: subField{name: "swap", description: "size of swap (in bytes)"},
+					isCounter: true, isProperty: true, isNeedScale: true},
+				{subField: subField{name: "freeSwap", enable: true, description: "size of free swap (in bytes)"},
+					isCounter: true, isProperty: true, isNeedScale: true},
+				{subField: subField{name: "cacheSwap", description: "size of swap cache (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "committed", description: "size of committed space (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "committedLimit", description: "limit for committed space (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "sizeSwap", description: "size of the swap cache (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "realZswap", description: "real (decompressed) size of the pages stored in zswap (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "storageZswap", description: "size of compressed storage used for zswap (in bytes)"},
+					isCounter: true, isNeedScale: true},
 			},
 		},
 		labelPAG: {
 			label: "Page", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "page size for this machine (in bytes)"}, isScale: true},
-				{subField: subField{name: "pageScans", description: "number of page scans"}},
-				{subField: subField{name: "allocstalls", description: "number of allocstalls"}},
+				{subField: subField{name: "pageScans", description: "number of page scans"},
+					isCounter: true},
+				{subField: subField{name: "allocstalls", description: "number of allocstalls"},
+					isCounter: true},
 				{subField: subField{name: "", description: "0 (future use)"}},
-				{subField: subField{name: "swapins", description: "number of swapins"}},
-				{subField: subField{name: "swapouts", description: "number of swapouts"}},
-				{subField: subField{name: "oomkills", description: "number of oomkills (-1 when counter not present)"}},
-				{subField: subField{name: "compactions", description: "number of process stalls to run memory compaction"}},
-				{subField: subField{name: "migrates", description: "number of pages successfully migrated in total"}},
-				{subField: subField{name: "migratesNUMA", description: "number of NUMA pages migrated"}},
-				{subField: subField{name: "blockRead", description: "number of pages read from block devices"}},
-				{subField: subField{name: "blockWrite", description: "number of pages written to block devices"}},
-				{subField: subField{name: "zswapins", description: "number of swapins from zswap"}},
-				{subField: subField{name: "zswapouts", description: "number of swapouts to zswap"}},
+				{subField: subField{name: "swapins", description: "number of swapins"},
+					isCounter: true},
+				{subField: subField{name: "swapouts", description: "number of swapouts"},
+					isCounter: true},
+				{subField: subField{name: "oomkills", description: "number of oomkills (-1 when counter not present)"},
+					isCounter: true},
+				{subField: subField{name: "compactions", description: "number of process stalls to run memory compaction"},
+					isCounter: true},
+				{subField: subField{name: "migrates", description: "number of pages successfully migrated in total"},
+					isCounter: true},
+				{subField: subField{name: "migratesNUMA", description: "number of NUMA pages migrated"},
+					isCounter: true},
+				{subField: subField{name: "blockRead", description: "number of pages read from block devices"},
+					isCounter: true},
+				{subField: subField{name: "blockWrite", description: "number of pages written to block devices"},
+					isCounter: true},
+				{subField: subField{name: "zswapins", description: "number of swapins from zswap"},
+					isCounter: true},
+				{subField: subField{name: "zswapouts", description: "number of swapouts to zswap"},
+					isCounter: true},
 			},
 		},
 		labelPSI: {
@@ -250,45 +330,74 @@ func getDataDescription() map[entryLabel]dataDescription {
 			label: "Disk", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "name"}, isSubName: true},
-				{subField: subField{name: "ios", description: "number of milliseconds spent for I/O"}},
-				{subField: subField{name: "reads", description: "number of reads issued"}},
-				{subField: subField{name: "sectorRead", description: "number of sectors transferred for reads"}},
-				{subField: subField{name: "writes", description: "number of writes issued"}},
-				{subField: subField{name: "sectorWrite", description: "number of sectors transferred for write"}},
-				{subField: subField{name: "discards", description: "number of discards issued (-1 if not supported)"}},
-				{subField: subField{name: "sectorDiscards", description: "number of sectors transferred for discards"}},
-				{subField: subField{name: "inFlight", description: "number of requests currently in flight (not yet completed)"}},
-				{subField: subField{name: "queue", description: "average queue depth while the disk was busy"}},
+				{subField: subField{name: "ios", description: "number of milliseconds spent for I/O"},
+					isCounter: true},
+				{subField: subField{name: "reads", description: "number of reads issued"},
+					isCounter: true},
+				{subField: subField{name: "sectorRead", description: "number of sectors transferred for reads"},
+					isCounter: true},
+				{subField: subField{name: "writes", description: "number of writes issued"},
+					isCounter: true},
+				{subField: subField{name: "sectorWrite", description: "number of sectors transferred for write"},
+					isCounter: true},
+				{subField: subField{name: "discards", description: "number of discards issued (-1 if not supported)"},
+					isCounter: true},
+				{subField: subField{name: "sectorDiscards", description: "number of sectors transferred for discards"},
+					isCounter: true},
+				{subField: subField{name: "inFlight", description: "number of requests currently in flight (not yet completed)"},
+					isCounter: true},
+				{subField: subField{name: "queue", description: "average queue depth while the disk was busy"},
+					isCounter: true, isProperty: true},
 			},
 		},
 		labelNFC: {
 			label: "Network Filesystem (client)", isSystem: true,
 			fields: []dataField{
-				{subField: subField{name: "RPC", description: "number of transmitted RPCs"}},
-				{subField: subField{name: "readRPC", description: "number of transmitted read RPCs "}},
-				{subField: subField{name: "writeRPC", description: "number of transmitted write RPCs"}},
-				{subField: subField{name: "retransmissionsRPC", description: "number of RPC retransmissions"}},
-				{subField: subField{name: "authorizationRPC", description: "number of authorization refreshes"}},
+				{subField: subField{name: "RPC", description: "number of transmitted RPCs"},
+					isCounter: true},
+				{subField: subField{name: "readRPC", description: "number of transmitted read RPCs "},
+					isCounter: true},
+				{subField: subField{name: "writeRPC", description: "number of transmitted write RPCs"},
+					isCounter: true},
+				{subField: subField{name: "retransmissionsRPC", description: "number of RPC retransmissions"},
+					isCounter: true},
+				{subField: subField{name: "authorizationRPC", description: "number of authorization refreshes"},
+					isCounter: true},
 			},
 		},
 		labelNFS: {
 			label: "Network Filesystem (server)", isSystem: true,
 			fields: []dataField{
-				{subField: subField{name: "RPC", description: "number of handled RPCs"}},
-				{subField: subField{name: "readRPC", description: "number of received read RPCs"}},
-				{subField: subField{name: "writePRC", description: "number of received write RPCs"}},
-				{subField: subField{name: "readBytes", description: "number of bytes read by clients"}},
-				{subField: subField{name: "writeBytes", description: "number of bytes written by clients"}},
-				{subField: subField{name: "badRPC", description: "number of RPCs with bad format"}},
-				{subField: subField{name: "badAuthRPC", description: "number of RPCs with bad authorization"}},
-				{subField: subField{name: "badRPC", description: "number of RPCs from bad client"}},
-				{subField: subField{name: "requests", description: "total number of handled network requests"}},
-				{subField: subField{name: "TCP", description: "number of handled network requests via TCP"}},
-				{subField: subField{name: "UPD", description: "number of handled network requests via UDP"}},
-				{subField: subField{name: "connection", description: "number of handled TCP connections"}},
-				{subField: subField{name: "cacheHits", description: "number of hits on reply cache"}},
-				{subField: subField{name: "cacheMiss", description: "number of misses on reply cache"}},
-				{subField: subField{name: "uncached", description: "number of uncached request"}},
+				{subField: subField{name: "RPC", description: "number of handled RPCs"},
+					isCounter: true},
+				{subField: subField{name: "readRPC", description: "number of received read RPCs"},
+					isCounter: true},
+				{subField: subField{name: "writePRC", description: "number of received write RPCs"},
+					isCounter: true},
+				{subField: subField{name: "readBytes", description: "number of bytes read by clients"},
+					isCounter: true},
+				{subField: subField{name: "writeBytes", description: "number of bytes written by clients"},
+					isCounter: true},
+				{subField: subField{name: "badRPC", description: "number of RPCs with bad format"},
+					isCounter: true},
+				{subField: subField{name: "badAuthRPC", description: "number of RPCs with bad authorization"},
+					isCounter: true},
+				{subField: subField{name: "badRPC", description: "number of RPCs from bad client"},
+					isCounter: true},
+				{subField: subField{name: "requests", description: "total number of handled network requests"},
+					isCounter: true},
+				{subField: subField{name: "TCP", description: "number of handled network requests via TCP"},
+					isCounter: true},
+				{subField: subField{name: "UPD", description: "number of handled network requests via UDP"},
+					isCounter: true},
+				{subField: subField{name: "connection", description: "number of handled TCP connections"},
+					isCounter: true},
+				{subField: subField{name: "cacheHits", description: "number of hits on reply cache"},
+					isCounter: true},
+				{subField: subField{name: "cacheMiss", description: "number of misses on reply cache"},
+					isCounter: true},
+				{subField: subField{name: "uncached", description: "number of uncached request"},
+					isCounter: true},
 			},
 		},
 		labelNET1: {
@@ -297,54 +406,90 @@ func getDataDescription() map[entryLabel]dataDescription {
 			label: "NET(total)", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "the verb \"upper\""}},
-				{subField: subField{name: "recvTCP", description: "number of packets received by TCP"}},
-				{subField: subField{name: "tranTCP", description: "number of packets transmitted by TCP"}},
-				{subField: subField{name: "recvTCP", description: "number of packets received by UDP"}},
-				{subField: subField{name: "tranTCP", description: "number of packets transmitted by UDP,"}},
-				{subField: subField{name: "recvIP", description: "number of packets received by IP"}},
-				{subField: subField{name: "tranIP", description: "number of packets transmitted by IP,"}},
-				{subField: subField{name: "higherIP", description: "number of packets delivered to higher layers by IP"}},
-				{subField: subField{name: "forwIP", description: "number of packets forwarded by IP"}},
-				{subField: subField{name: "inErrUDP", description: "number of input errors (UDP)"}},
-				{subField: subField{name: "noportErrUDP", description: "number of noport errors (UDP),"}},
-				{subField: subField{name: "activetTCP", description: "number of active opens (TCP),"}},
-				{subField: subField{name: "passiveTCP", description: "number of passive opens (TCP),"}},
-				{subField: subField{name: "estabTCP", description: "number of established connections at this moment (TCP),"}},
-				{subField: subField{name: "retranTCP", description: "number of retransmitted segments(TCP),"}},
-				{subField: subField{name: "inErrTCP", description: "number of input errors (TCP),"}},
-				{subField: subField{name: "outErrTCP", description: "number of output resets (TCP)"}},
-				{subField: subField{name: "checkErrTCP", description: "number of checksum errors on received packets (TCP)"}},
+				{subField: subField{name: "recvTCP", description: "number of packets received by TCP"},
+					isCounter: true},
+				{subField: subField{name: "tranTCP", description: "number of packets transmitted by TCP"},
+					isCounter: true},
+				{subField: subField{name: "recvTCP", description: "number of packets received by UDP"},
+					isCounter: true},
+				{subField: subField{name: "tranTCP", description: "number of packets transmitted by UDP,"},
+					isCounter: true},
+				{subField: subField{name: "recvIP", description: "number of packets received by IP"},
+					isCounter: true},
+				{subField: subField{name: "tranIP", description: "number of packets transmitted by IP,"},
+					isCounter: true},
+				{subField: subField{name: "higherIP", description: "number of packets delivered to higher layers by IP"},
+					isCounter: true},
+				{subField: subField{name: "forwIP", description: "number of packets forwarded by IP"},
+					isCounter: true},
+				{subField: subField{name: "inErrUDP", description: "number of input errors (UDP)"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "noportErrUDP", description: "number of noport errors (UDP),"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "activetTCP", description: "number of active opens (TCP),"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "passiveTCP", description: "number of passive opens (TCP),"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "estabTCP", description: "number of established connections at this moment (TCP),"},
+					isCounter: true},
+				{subField: subField{name: "retranTCP", description: "number of retransmitted segments(TCP),"},
+					isCounter: true},
+				{subField: subField{name: "inErrTCP", description: "number of input errors (TCP),"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "outErrTCP", description: "number of output resets (TCP)"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "checkErrTCP", description: "number of checksum errors on received packets (TCP)"},
+					isCounter: true, isProperty: true},
 			},
 		},
 		labelNET2: {
 			label: "NET", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "name of the interface"}, isSubName: true},
-				{subField: subField{name: "recvPackets", description: "number of packets received by the interface"}},
-				{subField: subField{name: "recvBytes", description: "number of bytes received by the interface"}},
-				{subField: subField{name: "packets", description: "number of packets transmitted  by the interface"}},
-				{subField: subField{name: "bytes", description: "number of bytes transmitted by the interface"}},
-				{subField: subField{name: "speed", description: "interface speed"}},
-				{subField: subField{name: "duplex", description: "duplex mode (0=half, 1=full)"}},
+				{subField: subField{name: "recvPackets", description: "number of packets received by the interface"},
+					isCounter: true},
+				{subField: subField{name: "recvBytes", description: "number of bytes received by the interface"},
+					isCounter: true},
+				{subField: subField{name: "packets", description: "number of packets transmitted  by the interface"},
+					isCounter: true},
+				{subField: subField{name: "bytes", description: "number of bytes transmitted by the interface"},
+					isCounter: true},
+				{subField: subField{name: "speed", description: "interface speed"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "duplex", description: "duplex mode (0=half, 1=full)"},
+					isCounter: true, isProperty: true},
 			},
 		},
 		labelNUM: {
 			label: "NUMA", isSystem: true,
 			fields: []dataField{
 				{subField: subField{name: "", description: "NUMA  node  number"}, isSubName: true},
-				{subField: subField{name: "", description: "page size for this machine (in bytes)"}, isScale: true},
-				{subField: subField{name: "fragmentation", description: "the fragmentation percentage of this node"}},
-				{subField: subField{name: "physical", description: "size of physical memory (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "free", description: "size of free memory (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "activeUsed", description: "recently (active) used memory (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "inactiveUsed", description: "less recently (inactive) used memory (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "cached", description: "size of cached file data (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "dirty", description: "dirty pages in cache (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "slabKernel", description: "slab memory being used for kernel mallocs (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "slabReclaim", description: "slab memory that is reclaimable (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "shared", description: "shared memory including tmpfs (in bytes)"}, isNeedScale: true},
-				{subField: subField{name: "totalHugePages", description: "total huge pages (huge pages)"}},
-				{subField: subField{name: "freeHugePages", description: "free huge pages (huge pages)"}},
+				{subField: subField{name: "pageSize", description: "page size for this machine (in bytes)"},
+					isProperty: true, isScale: true},
+				{subField: subField{name: "fragmentation", description: "the fragmentation percentage of this node"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "physical", description: "size of physical memory (in bytes)"},
+					isCounter: true, isProperty: true, isNeedScale: true},
+				{subField: subField{name: "free", description: "size of free memory (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "activeUsed", description: "recently (active) used memory (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "inactiveUsed", description: "less recently (inactive) used memory (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "cached", description: "size of cached file data (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "dirty", description: "dirty pages in cache (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "slabKernel", description: "slab memory being used for kernel mallocs (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "slabReclaim", description: "slab memory that is reclaimable (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "shared", description: "shared memory including tmpfs (in bytes)"},
+					isCounter: true, isNeedScale: true},
+				{subField: subField{name: "totalHugePages", description: "total huge pages (huge pages)"},
+					isCounter: true, isProperty: true},
+				{subField: subField{name: "freeHugePages", description: "free huge pages (huge pages)"},
+					isCounter: true},
 			},
 		},
 		labelPRG: {
@@ -356,14 +501,18 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "real uid"}},
 				{subField: subField{name: "", description: "real gid"}},
 				{subField: subField{name: "", description: "TGID (group number of related tasks/threads)"}},
-				{subField: subField{name: "threads", description: "total number of threads"}},
+				{subField: subField{name: "threads", description: "total number of threads"},
+					isCounter: true},
 				{subField: subField{name: "", description: "exit code (in case of fatal signal: signal number + 256)"}},
 				{subField: subField{name: "", description: "start time (epoch)"}},
 				{subField: subField{name: "", description: "full command line  (between  parenthesis  or underscores for spaces)"}},
 				{subField: subField{name: "", description: "PPID"}},
-				{subField: subField{name: "threadsRun", description: "number of threads in state 'running' (R)"}},
-				{subField: subField{name: "threadsSleep", description: "number of threads in state 'interruptible sleeping' (S)"}},
-				{subField: subField{name: "threadsDead", description: "number of threads in state 'uninterruptible sleeping' (D)"}},
+				{subField: subField{name: "threadsRun", description: "number of threads in state 'running' (R)"},
+					isCounter: true},
+				{subField: subField{name: "threadsSleep", description: "number of threads in state 'interruptible sleeping' (S)"},
+					isCounter: true},
+				{subField: subField{name: "threadsDead", description: "number of threads in state 'uninterruptible sleeping' (D)"},
+					isCounter: true},
 				{subField: subField{name: "", description: "effective uid"}},
 				{subField: subField{name: "", description: "effective gid"}},
 				{subField: subField{name: "", description: "saved uid"}},
@@ -536,19 +685,14 @@ func (obj *dataDescription) getSubName(data dataEntry) string {
 	return ""
 }
 
-func (obj *dataDescription) getCounters(data dataEntry) ([]struct {
-	key   string
-	value float64
-}, error) {
+func (obj *dataDescription) getCounters(data dataEntry) (count []keyValue, prop []keyValue, err error) {
 
-	var err error
 	var scale float64 = 1
 
 	length := min(len(data.points), len(obj.fields))
-	res := make([]struct {
-		key   string
-		value float64
-	}, 0, length)
+	count = make([]keyValue, 0, length)
+	prop = make([]keyValue, 0, length)
+
 	for i := 0; i < length; i++ {
 		var value float64
 		var field = obj.fields[i]
@@ -561,7 +705,7 @@ func (obj *dataDescription) getCounters(data dataEntry) ([]struct {
 		}
 
 		if value, err = bytesToFloat64(data.points[i]); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		if field.isScale {
@@ -576,31 +720,32 @@ func (obj *dataDescription) getCounters(data dataEntry) ([]struct {
 			}
 		}
 
-		if field.name != "" {
-			res = append(res, struct {
-				key   string
-				value float64
-			}{field.name, value})
+		if field.isCounter {
+			if field.name == "" {
+				return nil, nil, fmt.Errorf("Name needed: %s", field.description)
+			}
+
+			count = append(count, keyValue{field.name, value})
+		}
+		if field.isProperty {
+			if field.name == "" {
+				return nil, nil, fmt.Errorf("Name needed: %s", field.description)
+			}
+
+			prop = append(prop, keyValue{field.name, value})
 		}
 	}
-	for _, count := range obj.counts {
+	for _, field := range obj.counts {
 		var value float64
 
-		if value, err = count.counting(data); err != nil {
-			return nil, err
+		if value, err = field.counting(data); err != nil {
+			return nil, nil, err
 		}
 
-		res = append(res, struct {
-			key   string
-			value float64
-		}{count.name, value})
+		count = append(count, keyValue{field.name, value})
 	}
 
-	return res, err
-}
-
-func (obj *dataDescription) getProperties([][]byte) {
-
+	return count, prop, err
 }
 
 ///////////////////////////////////////////////////////////////////////////////

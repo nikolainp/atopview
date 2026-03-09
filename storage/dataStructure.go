@@ -23,6 +23,16 @@ func getDataStructure() map[string]metaTable {
 				{name: "name", datatype: "TEXT"},
 			},
 		},
+		"computerInfo": {name: "computerInfo",
+			columns: []metaColumn{
+				{name: "computer", datatype: "INTEGER"},
+				{name: "label", datatype: "TEXT"},
+				{name: "name", datatype: "TEXT"},
+				{name: "subName", datatype: "TEXT"},
+				{name: "min", datatype: "REAL"},
+				{name: "max", datatype: "REAL"},
+			},
+		},
 		"counters": {name: "counters",
 			columns: []metaColumn{
 				{name: "id", datatype: "INTEGER"},
