@@ -40,7 +40,8 @@
 			function loadPlotData(dataName, dataUrl) {
 				var d = $.Deferred();
 
-				$.get({url: dataUrl, dataType: 'json'}).done(function(res) {
+				$.get({url: dataUrl, dataType: 'json'})
+                .done(function(res) {
 					graphOptions.series.push({
 						name: dataName,
 						type: 'line',

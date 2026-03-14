@@ -65,7 +65,7 @@ func NewWebReporter(storage *storage.Storage) WebReporter {
 	//obj.filter = getDataFilter(obj.templates.Lookup("dataFilter.html"))
 	//obj.filter.setTime(details.FirstEventTime, details.LastEventTime)
 	obj.mainMenu = newNavigation(obj.templates.Lookup("mainmenu.html"), []webAnchor{
-		{"/", "data display"},
+		{"/display", "data display"},
 		{"/counters", "system counters"},
 		{"/information", "system information"},
 		{"/processes", "processes counters"},
@@ -119,8 +119,10 @@ func (obj *webReporter) getHandlers() http.Handler {
 	sm := http.NewServeMux()
 
 	sm.HandleFunc("/", obj.rootPage)
+	sm.HandleFunc("/display", obj.dataDisplayPage)
 	sm.HandleFunc("/counters", obj.countersPage)
-	// sm.HandleFunc("/performance", obj.performance)
+	sm.HandleFunc("/information", obj.informationPage)
+	// TODO информация о компьютере
 	// sm.HandleFunc("/performance/{id}", obj.performance)
 	// sm.HandleFunc("/servercontexts", obj.servercontexts)
 	// sm.HandleFunc("/servercontexts/{id}", obj.servercontexts)

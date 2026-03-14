@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>/*{{.Title}}*/</title>
+
+        <link rel="stylesheet" href="/static/style.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/2.3.7/css/dataTables.dataTables.min.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.6.0/css/rowGroup.dataTables.min.css">
+
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        <link rel="stylesheet" href="https://cdn.datatables.net/2.3.6/css/dataTables.dataTables.css" />
+        <script src="https://cdn.datatables.net/2.3.6/js/dataTables.js"></script>
+        <script src="https://cdn.datatables.net/rowgroup/1.6.0/js/dataTables.rowGroup.min.js"></script>
+
+        <script type="text/javascript">
+            var dataTable;
+            var collapsedGroups = {};
+
+            function plotOnLoad(){
+                plotTable();
+            }
+
+            function plotTable() {
+                dataTable = new DataTable('#informationTable', {
+                    paging: false,
+                    info: true,
+                    searching: true,
+					ajax: {
+    				    url: '/data/information/',
+                        type: 'POST',
+                        beforeSend: function(xhr) {
+                            const computer  = document.getElementById("computer");
+                            xhr.setRequestHeader('id', computer.value);
+                        },
+        				dataSrc: ''
+    				},
+					columns: [
+						{ title: "Label", data: 'Label' },
+						{ title: "Name", data: 'Name' },
+						{ title: "Device", data: 'SubName' },
+						{ title: "Min", data: 'Min' },
+						{ title: "Max", data: 'Max' }
+					],
+                    columnDefs: [{
+                        visible: false,
+                        targets: [0, 2]
+                    }],
+                    order: [['Label', 'asc'],['SubName', 'asc']],
+                    rowGroup: {
+                        dataSrc: ['Label', 'SubName'],
+                        startRender: function (rows, group, level) {
+                            var parent = rows.data().pluck('Label')[0];
+                            var collapsed0 = !!collapsedGroups[group];
+                            var collapsed1 = !!collapsedGroups[parent];
+
+                            rows.nodes().each(function (r) {
+                                r.style.display = (collapsed0 || collapsed1) ? 'none' : '';
+                            });    
+
+                            let tr = document.createElement('tr');
+                            let td = document.createElement('th');
+
+                            td.colSpan = 3;
+                            td.textContent = group;
+                            tr.setAttribute('data-name', group);
+                            if (!group || (level == 1 && collapsed1)) {
+                                tr.style.display = 'none';
+                            }
+                            tr.appendChild(td);
+
+                            return tr;
+                            // Add category name to the <tr>. NOTE: Hardcoded colspan
+                            // return $('<tr/>')
+                            //     .append('<td colspan="8">' + group + ' (' + rows.count() + ')</td>')
+                            //     .attr('data-name', group)
+                            //     .toggleClass('collapsed', collapsed);
+                        }
+                    }
+                });
+
+                dataTable.on('click', 'tr.dtrg-start', function () {
+                    var name = $(this).data('name');
+                    collapsedGroups[name] = !collapsedGroups[name];
+                    console.log('collapse: ' + name);
+                    dataTable.draw(false);
+                });  
+
+            }
+
+    </script>
+
+    </head>
+    <body onLoad="plotOnLoad()">
+        /*{{.MainMenu}}*/
+        <label for="computer">Computer:</label>
+        <select name="computer" id="computer" onChange="plotTable()">
+        /*{{ range $key, $value  := .Computers }}*/
+            <option value="/*{{$key}}*/">/*{{$value}}*/</option>
+        /*{{- end}}*/
+        </select>
+        <table id="informationTable" class="display">
+        </table>
+    </body>
+</html>

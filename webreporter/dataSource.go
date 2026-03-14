@@ -79,6 +79,9 @@ func (obj *webReporter) dataSource(w http.ResponseWriter, req *http.Request) {
 		js = obj.getCounterSeries(source)
 	case "statistics":
 		js = obj.getCountersStatistics()
+	case "information":
+		id := req.Header.Get("id")
+		js = obj.getInformation(id)
 	case "counters":
 		switch req.Method {
 		case "GET":

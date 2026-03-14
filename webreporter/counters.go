@@ -28,7 +28,7 @@ func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err := obj.templates.ExecuteTemplate(w, "countersPage.html", data)
+	err := obj.templates.ExecuteTemplate(w, "counters.html", data)
 	checkErr(err)
 }
 
