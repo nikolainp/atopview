@@ -7,7 +7,8 @@ import (
 
 type metaData interface {
 	InitDB() []string
-	SaveAll(schema string) []string
+	PostLoad() []string
+	CalcPivot() []metaPivot
 
 	GetInsertValueSQL(table string) string
 	GetUpdateSQL(table string, fields ...any) string
@@ -24,10 +25,12 @@ type implMetaData struct {
 type metaTable struct {
 	name    string
 	columns []metaColumn
+	indexes []string
 
 	//insertStm *sql.Stmt
 	isCache  bool
-	postSave string
+	postLoad []string
+	pivot    metaPivot
 
 	columnTimeFrom, columnTimeTo string
 }
@@ -40,6 +43,11 @@ type metaColumn struct {
 
 	isTimeFrom bool
 	isTimeTo   bool
+}
+
+type metaPivot struct {
+	columns string
+	calc    string
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -56,21 +64,32 @@ func (obj *implMetaData) InitDB() []string {
 
 	for _, table := range obj.tables {
 		queries = append(queries, table.getCreateSQL())
+		if table.indexes != nil {
+			queries = append(queries, table.indexes...)
+		}
 	}
 
 	return queries
 }
 
-func (obj *implMetaData) SaveAll(schema string) []string {
+func (obj *implMetaData) PostLoad() []string {
 	queries := make([]string, 0, len(obj.tables))
 
 	for _, table := range obj.tables {
-		if table.isCache {
-			continue
+		if table.postLoad != nil {
+			queries = append(queries, table.postLoad...)
 		}
-		queries = append(queries, table.getInsertSelectSQL())
-		if table.postSave != "" {
-			queries = append(queries, table.postSave)
+	}
+
+	return queries
+}
+
+func (obj *implMetaData) CalcPivot() []metaPivot {
+	queries := make([]metaPivot, 0, len(obj.tables))
+
+	for _, table := range obj.tables {
+		if table.pivot != (metaPivot{}) {
+			queries = append(queries, table.pivot)
 		}
 	}
 
@@ -109,19 +128,12 @@ func (obj *implMetaData) GetFilterSQL(table string) (filter string) {
 
 func (obj *implMetaData) GetUpdateSQL(table string, fields ...any) (query string) {
 
-	where := make([]string, 0, len(fields))
+	set := make([]string, 0, len(fields))
 	for i := range fields {
-		if i == 0 {
-			continue
-		}
-		where = append(where, fmt.Sprintf("%s = ?", fields[i]))
+		set = append(set, fmt.Sprintf("%s = ?", fields[i]))
 	}
 
-	if len(where) == 0 {
-		query = fmt.Sprintf("UPDATE %s SET %s = ? ", table, fields[0])
-	} else {
-		query = fmt.Sprintf("UPDATE %s SET %s = ? WHERE %s", table, fields[0], strings.Join(where, " AND "))
-	}
+	query = fmt.Sprintf("UPDATE %s SET %s", table, strings.Join(set, ", "))
 
 	return
 }
@@ -240,7 +252,7 @@ func (obj *metaTable) getCreateSQL() string {
 		queryColumns = append(queryColumns, fmt.Sprintf("%s %s", obj.columns[i].name, obj.columns[i].datatype))
 	}
 
-	return fmt.Sprintf("CREATE TABLE %s (%s)", obj.name, strings.Join(queryColumns, ","))
+	return fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s)", obj.name, strings.Join(queryColumns, ","))
 }
 
 func (obj metaTable) getInsertValueSQL() string {

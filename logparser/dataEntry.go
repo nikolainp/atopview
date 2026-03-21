@@ -2,7 +2,6 @@ package logparser
 
 import (
 	"bytes"
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -28,7 +27,7 @@ func newEntry(buf []byte) (res dataEntry, err error) {
 
 	res.label = getEntryLabel(bufSlice)
 	if res.label == labelNONE {
-		err = fmt.Errorf("Unknown label type")
+		//err = fmt.Errorf("Unknown label type")
 		return
 	}
 	if res.label == labelRESET || res.label == labelSEP {
@@ -97,11 +96,11 @@ func getEntryLabel(buf [][]byte) entryLabel {
 	case "PAG":
 		return labelPAG
 	case "PSI":
-		return labelPSI
+		if string(buf[6]) == "y" {
+			return labelPSI
+		}
 	case "DSK":
 		return labelDSK
-	case "PRC":
-		return labelPRC
 	case "NFC":
 		return labelNFC
 	case "NFS":
@@ -111,10 +110,16 @@ func getEntryLabel(buf [][]byte) entryLabel {
 			return labelNET1
 		}
 		return labelNET2
-	case "PRG":
-		return labelPRG
 	case "NUM":
 		return labelNUM
+	case "PRG":
+		if string(buf[28]) == "y" {
+			return labelPRG
+		}
+	case "PRC":
+		if string(buf[19]) == "y" {
+			return labelPRC
+		}
 	case "PRE":
 		return labelPRE
 	case "PRM":
@@ -129,7 +134,6 @@ func getEntryLabel(buf [][]byte) entryLabel {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
 
 func bytesToInt64(b []byte) (int64, error) {
 	// Convert byte slice to string

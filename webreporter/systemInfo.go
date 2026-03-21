@@ -8,7 +8,8 @@ import (
 
 func (obj *webReporter) informationPage(w http.ResponseWriter, req *http.Request) {
 
-	details := obj.getRootDetails()
+	url := req.URL.String()
+	//details := obj.getRootDetails()
 
 	data := struct {
 		Title, Version string
@@ -16,11 +17,11 @@ func (obj *webReporter) informationPage(w http.ResponseWriter, req *http.Request
 		MainMenu       string
 		Computers      map[int]string
 	}{
-		Title:   obj.title,
-		Version: details.Version,
-		//DataFilter:      obj.filter.getContent(req.URL.String()),
-		MainMenu:  obj.mainMenu.getMainMenu("/information"),
-		Computers: obj.listComputers(),
+		Title:      obj.title,
+		Version:    obj.version,
+		DataFilter: obj.filter.get(url),
+		MainMenu:   obj.mainMenu.get(url),
+		Computers:  obj.listComputers(),
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -34,7 +35,7 @@ func (obj *webReporter) listComputers() map[int]string {
 
 	res := make(map[int]string, 0)
 
-	details := obj.storage.SelectQuery("computers", "id", "name")
+	details := obj.storage.Select("computers", "id", "name")
 	// 	details.SetTimeFilter(obj.filter.getData())
 	details.SetOrder("name")
 
@@ -53,7 +54,7 @@ func (obj *webReporter) getInformation(id string) string {
 
 	rows := make([]string, 0)
 
-	details := obj.storage.SelectQuery("computerInfo",
+	details := obj.storage.Select("computerInfo",
 		"label", "name", "subName",
 		"min", "max")
 	// 	//details.SetTimeFilter(obj.filter.getData())

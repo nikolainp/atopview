@@ -128,10 +128,14 @@ func (obj *monitor) print() {
 			prevFinishedSize = obj.sizeDone
 		}
 
-		for i := range obj.messageBuffer {
-			fmt.Fprint(os.Stderr, obj.messageBuffer[i])
+		if len(obj.messageBuffer) > 0 {
+			fmt.Fprint(os.Stderr,
+				"                                                                            \r")
+			for i := range obj.messageBuffer {
+				fmt.Fprint(os.Stderr, obj.messageBuffer[i])
+			}
+			obj.messageBuffer = obj.messageBuffer[:0]
 		}
-		obj.messageBuffer = obj.messageBuffer[:0]
 
 		//"files: %d/%d size: %s/%s time: %s [speed %s/s/%s/s ]                           \r",
 		fmt.Fprintf(os.Stderr,

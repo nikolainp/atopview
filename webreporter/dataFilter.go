@@ -1,7 +1,6 @@
 package webreporter
 
 import (
-	"net/http"
 	"strings"
 	"text/template"
 	"time"
@@ -14,22 +13,26 @@ type dataFilter struct {
 	maximumTime, finishTime time.Time
 }
 
-func getDataFilter(html *template.Template) *dataFilter {
+///////////////////////////////////////////////////////////////////////////////
+
+func newDataFilter(html *template.Template, start, finish time.Time) *dataFilter {
 	obj := new(dataFilter)
 
 	obj.htmlTemplate = html
+	obj.minimumTime = start
+	obj.maximumTime = finish
 
 	return obj
 }
 
-func (obj *dataFilter) setTime(start, finish time.Time) {
-	obj.minimumTime = start
+///////////////////////////////////////////////////////////////////////////////
+
+func (obj *dataFilter) set(start, finish time.Time) {
 	obj.startTime = start
-	obj.maximumTime = finish
 	obj.finishTime = finish
 }
 
-func (obj *dataFilter) getContent(url string) string {
+func (obj *dataFilter) get(url string) string {
 	w := new(strings.Builder)
 
 	data := struct {
@@ -50,14 +53,7 @@ func (obj *dataFilter) getContent(url string) string {
 	return w.String()
 }
 
-func (obj *dataFilter) setContext(w http.ResponseWriter, req *http.Request) {
-
-	url := req.PostFormValue("url")
-	obj.startTime, _ = time.ParseInLocation("2006-01-02T15:04", req.PostFormValue("TimeFrom"), time.Local)
-	obj.finishTime, _ = time.ParseInLocation("2006-01-02T15:04", req.PostFormValue("TimeTo"), time.Local)
-
-	http.Redirect(w, req, url, http.StatusSeeOther)
-}
+///////////////////////////////////////////////////////////////////////////////
 
 func (obj *dataFilter) getData() (filter struct{ From, To time.Time }) {
 	filter.From = obj.startTime
@@ -81,4 +77,3 @@ func (obj *dataFilter) getFinishTime(tt time.Time) time.Time {
 
 	return obj.finishTime
 }
-

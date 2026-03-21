@@ -10,26 +10,28 @@ import (
 
 func (obj *webReporter) dataDisplayPage(w http.ResponseWriter, req *http.Request) {
 	obj.counters = obj.listCounters()
-	details := obj.getRootDetails()
+
+	url := req.URL.String()
+	// details := obj.getRootDetails()
 
 	data := struct {
 		Title, Version                 string
-		ProcessingSize, ProcessingTime string
-		ProcessingSpeed                string
-		FirstEventTime, LastEventTime  string
+		// ProcessingSize, ProcessingTime string
+		// ProcessingSpeed                string
+		// FirstEventTime, LastEventTime  string
 		DataFilter                     string
 		MainMenu                       string
 		Series                         map[int]string
 	}{
 		Title:           obj.title,
-		Version:         details.Version,
-		ProcessingSize:  byteCount(details.ProcessingSize),
-		ProcessingTime:  details.ProcessingTime.Format("2006-01-02 15:04:05"),
-		ProcessingSpeed: byteCount(details.ProcessingSpeed),
-		FirstEventTime:  details.FirstEventTime.Format("2006-01-02 15:04:05"),
-		LastEventTime:   details.LastEventTime.Format("2006-01-02 15:04:05"),
-		//DataFilter:      obj.filter.getContent(req.URL.String()),
-		MainMenu: obj.mainMenu.getMainMenu("/display"),
+		Version:         obj.version,
+		// ProcessingSize:  byteCount(details.ProcessingSize),
+		// ProcessingTime:  details.ProcessingTime.Format("2006-01-02 15:04:05"),
+		// ProcessingSpeed: byteCount(details.ProcessingSpeed),
+		// FirstEventTime:  details.FirstEventTime.Format("2006-01-02 15:04:05"),
+		// LastEventTime:   details.LastEventTime.Format("2006-01-02 15:04:05"),
+		DataFilter:      obj.filter.get(url),
+		MainMenu:        obj.mainMenu.get(url),
 		//Processes:       toDataRows(obj.getProcesses()),
 		Series: obj.counters,
 	}
@@ -45,9 +47,9 @@ func (obj *webReporter) listCounters() map[int]string {
 
 	res := make(map[int]string, 0)
 
-	details := obj.storage.SelectQuery("counters", "id", "fullName")
+	details := obj.storage.Select("counters", "id", "fullName")
 	// 	details.SetTimeFilter(obj.filter.getData())
-	details.SetFilter("enable = TRUE")
+	details.SetFilter("active = TRUE")
 	details.SetOrder("id")
 
 	var id int
@@ -67,8 +69,8 @@ func (obj *webReporter) getCounterSeries(id string) string {
 
 	rows := make([]string, 0)
 
-	details := obj.storage.SelectQuery("dataPoints", "timeStamp", "value")
-	//details.SetTimeFilter(obj.filter.getData())
+	details := obj.storage.Select("dataPoints", "timeStamp", "value")
+	details.SetTimeFilter(obj.filter.getData())
 	details.SetFilter("counter = ?", id)
 	details.SetOrder("timeStamp")
 
@@ -91,11 +93,11 @@ func (obj *webReporter) getCountersStatistics() string {
 	var counter int
 	var cMin, cMax, cAvg, cCount float64
 
-	details := obj.storage.SelectQuery("dataPoints", "counter",
+	details := obj.storage.Select("dataPoints", "counter",
 		"MIN(value)", "MAX(value)", "AVG(value), COUNT(*)",
 	)
-	//details.SetTimeFilter(obj.filter.getData())
-	details.SetFilter("counter IN (SELECT id FROM counters WHERE enable = TRUE)")
+	details.SetTimeFilter(obj.filter.getData())
+	details.SetFilter("counter IN (SELECT id FROM counters WHERE active = TRUE)")
 	details.SetGroup("counter")
 	details.SetOrder("counter")
 

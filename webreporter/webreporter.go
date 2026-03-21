@@ -35,10 +35,10 @@ type webReporter struct {
 	templates *template.Template
 	logger    *log.Logger
 
-	title    string
-	filter   *dataFilter
-	mainMenu *navigation
-	counters map[int]string
+	title, version string
+	filter         *dataFilter
+	mainMenu       *navigation
+	counters       map[int]string
 
 	port int
 }
@@ -60,10 +60,13 @@ func NewWebReporter(storage *storage.Storage) WebReporter {
 		ParseFS(templateContent, "templates/*.html")
 	checkErr(err)
 
-	//	details := obj.getRootDetails()
-	//obj.title = details.Title
-	//obj.filter = getDataFilter(obj.templates.Lookup("dataFilter.html"))
-	//obj.filter.setTime(details.FirstEventTime, details.LastEventTime)
+	details := obj.getRootDetails()
+	obj.title = details.Title
+	obj.version = details.Version
+
+	obj.filter = newDataFilter(obj.templates.Lookup("dataFilter.html"), details.FirstEventTime, details.LastEventTime)
+	obj.restoreDataFilter()
+
 	obj.mainMenu = newNavigation(obj.templates.Lookup("mainmenu.html"), []webAnchor{
 		{"/display", "data display"},
 		{"/counters", "system counters"},
@@ -122,12 +125,11 @@ func (obj *webReporter) getHandlers() http.Handler {
 	sm.HandleFunc("/display", obj.dataDisplayPage)
 	sm.HandleFunc("/counters", obj.countersPage)
 	sm.HandleFunc("/information", obj.informationPage)
-	// TODO информация о компьютере
 	// sm.HandleFunc("/performance/{id}", obj.performance)
 	// sm.HandleFunc("/servercontexts", obj.servercontexts)
 	// sm.HandleFunc("/servercontexts/{id}", obj.servercontexts)
 
-	sm.HandleFunc("/datafilter", obj.filter.setContext)
+	sm.HandleFunc("/datafilter", obj.dataFilter)
 	sm.HandleFunc("/data/{section}/{source...}", obj.dataSource)
 
 	sm.Handle("/static/", http.FileServer(http.FS(staticContent)))

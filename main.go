@@ -26,9 +26,6 @@ func init() {
 }
 
 func main() {
-	var wg sync.WaitGroup
-	defer wg.Wait()
-
 	ctx, cancel := withSignalNotify()
 	defer cancel()
 
@@ -37,11 +34,13 @@ func main() {
 		return
 	}
 
-	var storage *storage.Storage
+	storage, err := getStorage(conf.PathStorage)
+	if err != nil {
+		return
+	}
+
 	if !conf.ShowReportOnly {
-		if storage, err = getNewStorage(); err != nil {
-			return
-		}
+		var wg sync.WaitGroup
 
 		monitor := monitor.NewMonitor()
 		monitor.Start(ctx, "Parse: %[6]s - %[5]s time: %[7]s")
@@ -50,13 +49,14 @@ func main() {
 		wg.Go(func() {
 			worker := logparser.NewLogParser(storage)
 			worker.WithMonitor(monitor)
+			worker.WithDetails(conf.PathLog, version)
 			if err := worker.ReadData(ctx, transfer); err != nil {
 				fmt.Fprintf(os.Stderr, "parse error: %v\n", err)
 				cancel()
 			}
 		})
 		wg.Go(func() {
-			worker := logreader.NewLogReader(conf.PathUtilinty, conf.PathLog)
+			worker := logreader.NewLogReader(conf.PathUtility, conf.PathLog)
 			worker.WithMonitor(monitor)
 			if errText, err := worker.ReadData(ctx, transfer); err != nil {
 				fmt.Fprintf(os.Stderr, "atop error: %v\n", err)
@@ -68,14 +68,16 @@ func main() {
 
 		wg.Wait()
 		// monitor.Start("Save data: parts: %[1]d/%[2]d time: %[5]s")
-		monitor.Stop()
-		storage.FlushAll(conf.PathStorage)
 
-		// FIXME завершение при ошибке
-	} else {
-		if storage, err = getOldStorage(conf.PathStorage); err != nil {
+		if ctx.Err() != nil {
 			return
 		}
+
+		monitor.WriteEvent("Start post processing\n")
+		storage.FinishLoad()
+		storage.CalcPivot()
+		monitor.WriteEvent("Finish loading\n")
+		monitor.Stop()
 	}
 
 	startWebServer(ctx, storage)
@@ -122,17 +124,7 @@ func getConfig(args []string) (config.Config, error) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-func getNewStorage() (*storage.Storage, error) {
-
-	db, err := storage.CreateCache()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Storage error: %v\n", err)
-	}
-
-	return db, err
-}
-
-func getOldStorage(path string) (*storage.Storage, error) {
+func getStorage(path string) (*storage.Storage, error) {
 
 	db, err := storage.Open(path)
 	if err != nil {

@@ -23,7 +23,7 @@ func newNavigation(page *template.Template, menu []webAnchor) *navigation {
 	return obj
 }
 
-func (obj *navigation) getMainMenu(menuItem string) string {
+func (obj *navigation) get(url string) string {
 	w := new(strings.Builder)
 
 	var data struct {
@@ -32,7 +32,7 @@ func (obj *navigation) getMainMenu(menuItem string) string {
 	data.MainMenu = make([]webAnchor, 0, len(obj.menu))
 
 	for i := range obj.menu {
-		if obj.menu[i].URL == menuItem {
+		if obj.menu[i].URL == url {
 			continue
 		}
 		data.MainMenu = append(data.MainMenu, obj.menu[i])
@@ -74,19 +74,19 @@ func (obj *navigation) getMainMenu(menuItem string) string {
 // 	return w.String()
 // }
 
-const navigationSubMenuTemplate = `
-	{{ $url := .URL }}
-	<nav class="menu">	
-		<ul class="nav" style="display: inline-grid;">
-		{{ range $item := .MenuItems }}
-			<li><a style="width: 150px; overflow-wrap: anywhere;" 
-				{{ if (eq $item.Id "") }}
-				href="{{$url}}">{{$item.Name}}
-				{{ else }}
-				href="{{$url}}/{{$item.Id}}">{{$item.Name}}
-				{{ end }}
-				</a></li>
-		{{end}}
-		</ul>
-	</nav>
-`
+// const navigationSubMenuTemplate = `
+// 	{{ $url := .URL }}
+// 	<nav class="menu">
+// 		<ul class="nav" style="display: inline-grid;">
+// 		{{ range $item := .MenuItems }}
+// 			<li><a style="width: 150px; overflow-wrap: anywhere;"
+// 				{{ if (eq $item.Id "") }}
+// 				href="{{$url}}">{{$item.Name}}
+// 				{{ else }}
+// 				href="{{$url}}/{{$item.Id}}">{{$item.Name}}
+// 				{{ end }}
+// 				</a></li>
+// 		{{end}}
+// 		</ul>
+// 	</nav>
+// `

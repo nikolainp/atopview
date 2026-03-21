@@ -91,7 +91,7 @@
                         dataType: 'json',
                         beforeSend: function(xhr) {
                             xhr.setRequestHeader("id", rowData.ID);
-                            xhr.setRequestHeader("enable", cellData);
+                            xhr.setRequestHeader("active", cellData);
                         },
                         success: function(response) {
                             console.log(response);

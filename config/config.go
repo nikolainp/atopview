@@ -21,7 +21,7 @@ type PrintVersion struct {
 type Config struct {
 	programName string
 
-	PathUtilinty   string
+	PathUtility    string
 	PathLog        string
 	PathStorage    string
 	ShowReportOnly bool
@@ -38,7 +38,7 @@ func NewConfig(args []string) (obj Config, err error) {
 
 	fs := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	fs.SetOutput(fsOut)
-	fs.StringVar(&obj.PathUtilinty, "x", "/usr/bin/atop", "path to the atop executable file")
+	fs.StringVar(&obj.PathUtility, "x", "/usr/bin/atop", "path to the atop executable file")
 	fs.BoolVar(&isPrintVersion, "v", false, "print version")
 	fs.BoolVar(&obj.ShowReportOnly, "r", false, "just show report")
 

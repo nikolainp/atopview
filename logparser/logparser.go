@@ -9,6 +9,7 @@ import (
 // LogParser ...
 type LogParser interface {
 	WithMonitor(Monitor)
+	WithDetails(title, version string)
 	ReadData(context.Context, DataTransfer) error
 }
 
@@ -26,7 +27,7 @@ type Storage interface {
 		Execute()
 	}
 	//      SetIdByGroup(table string, column, group string)
-	SelectQuery(table string, columns ...string) interface {
+	Select(table string, columns ...string) interface {
 		SetTimeFilter(struct {
 			From time.Time
 			To   time.Time
@@ -52,6 +53,7 @@ type logParser struct {
 	monitor Monitor
 
 	desc         map[entryLabel]dataDescription
+	details      dataDetails
 	counterID    map[string]int
 	computerInfo map[string]*computerInfo
 }
@@ -74,6 +76,11 @@ func (obj *logParser) WithMonitor(monitor Monitor) {
 	obj.monitor = monitor
 }
 
+func (obj *logParser) WithDetails(title, version string) {
+	obj.details.title = title
+	obj.details.version = version
+}
+
 func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 
 	isFirstLine := true
@@ -82,7 +89,7 @@ func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 		data, err := newEntry(buf[:n])
 		if err != nil {
 			obj.monitor.WriteEvent("Error: %v\n%s\n", err, string(buf))
-			return err
+			return nil
 		}
 
 		if data.label == labelNONE || data.label == labelRESET || data.label == labelSEP {
@@ -92,9 +99,11 @@ func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 		if isFirstLine {
 			isFirstLine = false
 			obj.monitor.WriteEvent("Start time: %s\n", data.timeStamp.String())
+			obj.details.firstEventTime = data.timeStamp
 			obj.monitor.DiscoveredData(data.timeStamp.String(), 0, 0)
 		}
 		obj.monitor.ProcessedData(data.timeStamp.String(), 0, 0)
+		obj.details.lastEventTime = data.timeStamp
 
 		err = obj.saveRecord(data)
 
@@ -114,8 +123,8 @@ func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 		}
 	}
 
-	// save computer properties
-	obj.saveComputerProperties()
+	obj.saveDetails()
+	obj.saveComputers()
 
 	return nil
 }
@@ -132,7 +141,7 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 	computer := obj.getComputer(data.computer)
 	subName := desc.getSubName(data)
 
-	counters, properties, err := desc.getCounters(data)
+	counters, err := desc.getCounters(data)
 	if err != nil {
 		return err
 	}
@@ -144,12 +153,6 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 		obj.storage.WriteRow("dataPoints", data.timeStamp, id, counter.value)
 	}
 
-	for _, property := range properties {
-		computer.setProperty(
-			fieldKey{desc.getLabel(), property.key, subName},
-			property.value)
-	}
-
 	// TODO детали загрузки
 	// TODO параметры процесса
 	// TODO счётчики по всем процессам - число зомби, число процессов этого типа, ждущих процессов,новых/старых/завершившихся
@@ -157,18 +160,26 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 	return nil
 }
 
-func (obj *logParser) saveComputerProperties() {
+func (obj *logParser) saveDetails() {
+
+	obj.storage.WriteRow("dataFilter",
+		obj.details.firstEventTime,
+		obj.details.lastEventTime,
+	)
+	obj.storage.WriteRow("details",
+		obj.details.title,
+		obj.details.version,
+		obj.details.firstEventTime,
+		obj.details.lastEventTime,
+	)
+
+}
+
+func (obj *logParser) saveComputers() {
 
 	for _, info := range obj.computerInfo {
-
 		obj.storage.WriteRow("computers",
 			info.getID(), info.getName())
-
-		for key, value := range info.getProperties() {
-			obj.storage.WriteRow("computerInfo", info.getID(),
-				key.label, key.name, key.subName,
-				value.min, value.max)
-		}
 	}
 
 }
@@ -207,11 +218,15 @@ func (obj *logParser) getCounterID(desc dataDescription, computer *computerInfo,
 	details := desc.getDetails(name)
 
 	obj.storage.WriteRow("counters", id,
-		desc.isSystem, details.enable,
+		desc.isSystem, details.active,
 		longName, computer.getID(),
 		label, name, subName,
 		details.description)
 	obj.counterID[longName] = id
+
+	if details.isProperty {
+		obj.storage.WriteRow("computerProperties", computer.getID(), id)
+	}
 
 	return id
 }

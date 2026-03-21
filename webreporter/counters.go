@@ -8,23 +8,22 @@ import (
 )
 
 func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
-
-	details := obj.getRootDetails()
+	url := req.URL.String()
+	// details := obj.getRootDetails()
 
 	data := struct {
-		Title, Version                 string
-		ProcessingSize, ProcessingTime string
-		ProcessingSpeed                string
-		FirstEventTime, LastEventTime  string
-		DataFilter                     string
-		MainMenu                       string
-		Series                         map[int]string
+		Title, Version string
+		// ProcessingSize, ProcessingTime string
+		// ProcessingSpeed                string
+		// FirstEventTime, LastEventTime  string
+		DataFilter string
+		MainMenu   string
+		Series     map[int]string
 	}{
-		Title:   obj.title,
-		Version: details.Version,
-		//DataFilter:      obj.filter.getContent(req.URL.String()),
-		MainMenu: obj.mainMenu.getMainMenu("/counters"),
-		//Processes:       toDataRows(obj.getProcesses()),
+		Title:      obj.title,
+		Version:    obj.version,
+		DataFilter: obj.filter.get(url),
+		MainMenu:   obj.mainMenu.get(url),
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -60,7 +59,7 @@ func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
 
 // 	details := obj.storage.SelectQuery("counters", "id", "fullName")
 // 	// 	details.SetTimeFilter(obj.filter.getData())
-// 	details.SetFilter("enable = TRUE")
+// 	details.SetFilter("active = TRUE")
 // 	details.SetOrder("id")
 
 // 	var id int
@@ -84,7 +83,7 @@ func (obj *webReporter) getCountersList() string {
 
 	rows := make([]string, 0)
 
-	details := obj.storage.SelectQuery("counters", "id", "enable", "fullName",
+	details := obj.storage.Select("counters", "id", "active", "fullName",
 		"label", "name", "subName", "description")
 	// 	//details.SetTimeFilter(obj.filter.getData())
 	// 	details.SetFilter("counter = ?", id)
@@ -92,12 +91,12 @@ func (obj *webReporter) getCountersList() string {
 	details.SetOrder("label")
 
 	var id int64
-	var enable bool
+	var active bool
 	var fullName, label, name, subName, description string
-	for details.Next(&id, &enable, &fullName, &label, &name, &subName, &description) {
+	for details.Next(&id, &active, &fullName, &label, &name, &subName, &description) {
 		rows = append(rows, fmt.Sprintf(
 			"{\"ID\": \"%d\", \"Enable\": %t, \"FullName\": \"%s\", \"Label\": \"%s\", \"Name\": \"%s\", \"SubName\": \"%s\", \"Description\": \"%s\"}",
-			id, enable,
+			id, active,
 			template.JSEscapeString(fullName),
 			label, name, subName, description,
 		))
@@ -107,18 +106,18 @@ func (obj *webReporter) getCountersList() string {
 		strings.Join(rows, ","))
 }
 
-func (obj *webReporter) setCounterEnable(id, enable string) {
+func (obj *webReporter) setCounterActive(id, active string) {
 
-	var argEnable bool
+	var argActive bool
 
-	switch enable {
+	switch active {
 	case "true":
-		argEnable = true
+		argActive = true
 	case "false":
-		argEnable = false
+		argActive = false
 	}
 
-	update := obj.storage.Update("counters", "enable", argEnable)
+	update := obj.storage.Update("counters", "active", argActive)
 	update.SetFilter(fmt.Sprintf("id = %s", id))
 	update.Execute()
 
