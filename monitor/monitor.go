@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -102,6 +103,7 @@ func (obj *monitor) ProcessedData(mark string, count int, size int64) {
 func (obj *monitor) print() {
 	var prevFinishedSize int64
 	var prevDuration time.Duration
+	var progressSize int
 
 	obj.startTime = time.Now()
 	obj.ticker = time.NewTicker(500 * time.Millisecond)
@@ -129,8 +131,7 @@ func (obj *monitor) print() {
 		}
 
 		if len(obj.messageBuffer) > 0 {
-			fmt.Fprint(os.Stderr,
-				"                                                                            \r")
+			fmt.Fprint(os.Stderr, strings.Repeat(" ", progressSize+2), "\r")
 			for i := range obj.messageBuffer {
 				fmt.Fprint(os.Stderr, obj.messageBuffer[i])
 			}
@@ -138,13 +139,14 @@ func (obj *monitor) print() {
 		}
 
 		//"files: %d/%d size: %s/%s time: %s [speed %s/s/%s/s ]                           \r",
-		fmt.Fprintf(os.Stderr,
+		n, _ := fmt.Fprintf(os.Stderr,
 			obj.fmtShowProgress,
 			obj.partsDone, obj.partsTotal,
 			byteCount(obj.sizeDone), byteCount(obj.sizeTotal),
 			obj.markDone, obj.markStart,
 			totalDuration.Truncate(time.Second),
 			byteCount(speed), byteCount(totalSpeed))
+		progressSize = max(progressSize, n)
 	}
 
 	obj.wg.Go(func() {

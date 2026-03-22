@@ -34,6 +34,7 @@ func CreateCache() (*Storage, error) {
 // Open ...
 func Open(stroragePath string) (obj *Storage, err error) {
 
+	// FIXME база может не существовать
 	// if _, err := os.Stat(stroragePath); err != nil {
 	// 	return nil, fmt.Errorf("open storage: %v", err)
 	// }

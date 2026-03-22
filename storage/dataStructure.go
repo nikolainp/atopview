@@ -29,12 +29,6 @@ func getDataStructure() map[string]metaTable {
 				{name: "name", datatype: "TEXT"},
 			},
 		},
-		"computerProperties": {name: "computerProperties",
-			columns: []metaColumn{
-				{name: "computer", datatype: "INTEGER"},
-				{name: "counter", datatype: "INTEGER"},
-			},
-		},
 		"counters": {name: "counters",
 			columns: []metaColumn{
 				{name: "id", datatype: "INTEGER"},
@@ -63,27 +57,19 @@ func getDataStructure() map[string]metaTable {
 			columns: []metaColumn{
 				{name: "computer", datatype: "INTEGER"},
 				{name: "counter", datatype: "INTEGER"},
-				{name: "label", datatype: "TEXT"},
-				{name: "name", datatype: "TEXT"},
-				{name: "subName", datatype: "TEXT"},
-				{name: "min", datatype: "REAL"},
-				{name: "max", datatype: "REAL"},
+				{name: "label", datatype: "TEXT", isService: true},
+				{name: "name", datatype: "TEXT", isService: true},
+				{name: "subName", datatype: "TEXT", isService: true},
+				{name: "min", datatype: "REAL", isService: true},
+				{name: "max", datatype: "REAL", isService: true},
 			},
 			postLoad: []string{
 				`
-INSERT INTO
-    computerInfo
-    (computer, counter, label, name, subName)
-SELECT 
-    cp.computer,
-    cp.counter,
-    cc.label,
-    cc.name,
-    cc.subname
-FROM 
-    computerProperties cp
-    LEFT JOIN counters cc
-        ON cp.counter == cc.id
+UPDATE computerInfo
+SET label = up.label, name = up.name, subName = up.subName
+FROM counters up
+WHERE
+    computerInfo.counter = up. id
 `,
 			},
 			pivot: metaPivot{
@@ -97,7 +83,7 @@ FROM (
         MAX(value) as max
     FROM dataPoints
     WHERE
-        counter in (SELECT counter from computerProperties)
+        counter in (SELECT counter from computerInfo)
         AND timeStamp < (SELECT timeTo from dataFilter)
         AND timeStamp > (SELECT timeFrom from dataFilter)
     GROUP BY counter

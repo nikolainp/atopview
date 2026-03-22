@@ -225,7 +225,7 @@ func (obj *logParser) getCounterID(desc dataDescription, computer *computerInfo,
 	obj.counterID[longName] = id
 
 	if details.isProperty {
-		obj.storage.WriteRow("computerProperties", computer.getID(), id)
+		obj.storage.WriteRow("computerInfo", computer.getID(), id)
 	}
 
 	return id
