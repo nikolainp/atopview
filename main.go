@@ -75,7 +75,6 @@ func main() {
 
 		monitor.WriteEvent("Start post processing\n")
 		storage.FinishLoad()
-		storage.CalcPivot()
 		monitor.WriteEvent("Finish loading\n")
 		monitor.Stop()
 	}

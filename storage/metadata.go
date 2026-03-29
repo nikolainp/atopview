@@ -47,6 +47,7 @@ type metaColumn struct {
 
 type metaPivot struct {
 	columns string
+	create  string
 	calc    string
 }
 

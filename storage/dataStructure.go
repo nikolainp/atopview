@@ -29,10 +29,9 @@ func getDataStructure() map[string]metaTable {
 				{name: "name", datatype: "TEXT"},
 			},
 		},
-		"counters": {name: "counters",
+		"computerCounters": {name: "computerCounters",
 			columns: []metaColumn{
 				{name: "id", datatype: "INTEGER"},
-				{name: "system", datatype: "BOLLEAN"},
 				{name: "active", datatype: "BOOLEAN"},
 				{name: "fullName", datatype: "TEXT"},
 				{name: "computer", datatype: "INTEGER"},
@@ -40,6 +39,27 @@ func getDataStructure() map[string]metaTable {
 				{name: "name", datatype: "TEXT"},
 				{name: "subName", datatype: "TEXT"},
 				{name: "description", datatype: "TEXT"},
+			},
+		},
+		"processCounters": {name: "processCounters",
+			columns: []metaColumn{
+				{name: "id", datatype: "INTEGER"},
+				{name: "active", datatype: "BOOLEAN"},
+				{name: "fullName", datatype: "TEXT"},
+				{name: "computer", datatype: "INTEGER"},
+				{name: "label", datatype: "TEXT"},
+				{name: "name", datatype: "TEXT"},
+				{name: "description", datatype: "TEXT"},
+			},
+		},
+		"processCountersData": {name: "processCountersData",
+			columns: []metaColumn{
+				{name: "counter", datatype: "INTEGER"},
+				{name: "process", datatype: "INTEGER"},
+				{name: "data", datatype: "INTEGER"},
+			},
+			indexes: []string{
+				"CREATE UNIQUE INDEX IF NOT EXISTS processCountersData1 ON processCountersData (counter, process, data)",
 			},
 		},
 		"dataPoints": {name: "dataPoints",
@@ -50,7 +70,7 @@ func getDataStructure() map[string]metaTable {
 				{name: "value", datatype: "REAL"},
 			},
 			indexes: []string{
-				"CREATE UNIQUE INDEX IF NOT EXISTS dataPoints1 ON dataPoints (counter, timeStamp)",
+				"CREATE INDEX IF NOT EXISTS dataPoints1 ON dataPoints (counter, timeStamp)",
 			},
 		},
 		"computerInfo": {name: "computerInfo",
@@ -67,7 +87,7 @@ func getDataStructure() map[string]metaTable {
 				`
 UPDATE computerInfo
 SET label = up.label, name = up.name, subName = up.subName
-FROM counters up
+FROM computerCounters up
 WHERE
     computerInfo.counter = up. id
 `,
@@ -90,6 +110,48 @@ FROM (
     ) as up
 WHERE
     computerInfo.counter = up.counter
+`,
+			},
+		},
+		"processInfo": {name: "processInfo",
+			columns: []metaColumn{
+				{name: "id", datatype: "INTEGER"},
+				{name: "active", datatype: "BOOLEAN"},
+				{name: "computer", datatype: "INTEGER"},
+				{name: "pid"},
+				{name: "ppid"},
+				{name: "name", datatype: "TEXT"},
+				{name: "commandLine", datatype: "TEXT"},
+				{name: "exitCode"},
+				{name: "startTime", isTimeFrom: true},
+				{name: "endTime", isTimeTo: true},
+			},
+			pivot: metaPivot{
+				columns: `
+SELECT name FROM processCounters ORDER BY name;
+`,
+				create: `
+ALTER TABLE processInfo ADD COLUMN %[1]s_min REAL; 
+ALTER TABLE processInfo ADD COLUMN %[1]s_max REAL;
+`,
+				calc: `
+UPDATE processInfo
+SET %[1]s_min = up.min, %[1]s_max = up.max
+FROM (
+    SELECT
+        process,
+        MIN(value) as min,
+        MAX(value) as max
+    FROM dataPoints dp
+        INNER JOIN processCountersData pc
+        ON dp.counter = pc.data
+        AND pc.counter = (SELECT id from processCounters WHERE name = "%[1]s")
+        AND dp.timeStamp < (SELECT timeTo from dataFilter)
+        AND dp.timeStamp > (SELECT timeFrom from dataFilter)
+    GROUP BY process
+    ) as up
+WHERE
+    processInfo.id = up.process
 `,
 			},
 		},

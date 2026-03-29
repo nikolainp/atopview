@@ -67,6 +67,25 @@ func newEntry(buf []byte) (res dataEntry, err error) {
 		res.points = bufSlice[6:]
 	}
 
+	switch res.label {
+	case labelPSI:
+		if string(res.points[0]) != "y" {
+			res.label = labelNONE
+		}
+	case labelNET1:
+		if string(res.points[0]) != "upper" {
+			res.label = labelNET2
+		}
+	case labelPRG:
+		if string(res.points[21]) != "y" {
+			res.label = labelNONE
+		}
+	case labelPRC:
+		if string(res.points[13]) != "y" {
+			res.label = labelNONE
+		}
+	}
+
 	return
 }
 
@@ -96,9 +115,7 @@ func getEntryLabel(buf [][]byte) entryLabel {
 	case "PAG":
 		return labelPAG
 	case "PSI":
-		if string(buf[6]) == "y" {
-			return labelPSI
-		}
+		return labelPSI
 	case "DSK":
 		return labelDSK
 	case "NFC":
@@ -106,20 +123,13 @@ func getEntryLabel(buf [][]byte) entryLabel {
 	case "NFS":
 		return labelNFS
 	case "NET":
-		if string(buf[6]) == "upper" {
-			return labelNET1
-		}
-		return labelNET2
+		return labelNET1
 	case "NUM":
 		return labelNUM
 	case "PRG":
-		if string(buf[28]) == "y" {
-			return labelPRG
-		}
+		return labelPRG
 	case "PRC":
-		if string(buf[19]) == "y" {
-			return labelPRC
-		}
+		return labelPRC
 	case "PRE":
 		return labelPRE
 	case "PRM":

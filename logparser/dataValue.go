@@ -5,6 +5,11 @@ type keyValue struct {
 	value float64
 }
 
+type keyNote struct {
+	key  string
+	note []byte
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 type dataValue struct {
@@ -26,3 +31,5 @@ func (obj *dataValue) set(value float64) {
 func (obj *dataValue) get() (min float64, max float64) {
 	return obj.min, obj.max
 }
+
+///////////////////////////////////////////////////////////////////////////////

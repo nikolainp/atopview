@@ -412,8 +412,9 @@ func getDataDescription() map[entryLabel]dataDescription {
 		labelPRG: {
 			label: "Program", isSystem: false,
 			fields: []dataField{
-				{subField: subField{name: "", description: "PID (unique ID of task),"}},
-				{subField: subField{name: "", description: "name (between parenthesis or underscores for spaces)"},
+				{subField: subField{name: "pid", description: "PID (unique ID of task),"},
+					isNote: true},
+				{subField: subField{name: "name", description: "name (between parenthesis or underscores for spaces)"},
 					isNote: true},
 				{subField: subField{name: "", description: "state"},
 					isNote: true},
@@ -424,12 +425,14 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "TGID (group number of related tasks/threads)"},
 					isNote: true},
 				{subField: subField{name: "threads", description: "total number of threads"}},
-				{subField: subField{name: "", description: "exit code (in case of fatal signal: signal number + 256)"},
+				{subField: subField{name: "exitCode", description: "exit code (in case of fatal signal: signal number + 256)"},
 					isNote: true},
-				{subField: subField{name: "", description: "start time (epoch)"},
+				{subField: subField{name: "startTime", description: "start time (epoch)"},
 					isNote: true},
-				{subField: subField{name: "", description: "full command line  (between  parenthesis  or underscores for spaces)"}},
-				{subField: subField{name: "", description: "PPID"}},
+				{subField: subField{name: "commandLine", description: "full command line  (between  parenthesis  or underscores for spaces)"},
+					isNote: true},
+				{subField: subField{name: "ppid", description: "PPID"},
+					isNote: true},
 				{subField: subField{name: "threadsRun", description: "number of threads in state 'running' (R)"}},
 				{subField: subField{name: "threadsSleep", description: "number of threads in state 'interruptible sleeping' (S)"}},
 				{subField: subField{name: "threadsDead", description: "number of threads in state 'uninterruptible sleeping' (D)"}},
@@ -439,7 +442,8 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "saved gid"}},
 				{subField: subField{name: "", description: "filesystem uid"}},
 				{subField: subField{name: "", description: "filesystem gid"}},
-				{subField: subField{name: "", description: "elapsed time of terminated process (hertz)"}},
+				{subField: subField{name: "elapsedTime", description: "elapsed time of terminated process (hertz)"},
+					isNote: true,},
 				{subField: subField{name: "", description: "is_process (y/n)"}},
 				{subField: subField{name: "", description: "OpenVZ virtual pid (VPID)"}},
 				{subField: subField{name: "", description: "OpenVZ container id (CTID)"}},
@@ -659,6 +663,26 @@ func (obj *dataDescription) getCounters(data dataEntry) (count []keyValue, err e
 	}
 
 	return count, err
+}
+
+func (obj *dataDescription) getNotes(data dataEntry) (note []keyNote, err error) {
+
+	length := min(len(data.points), len(obj.fields))
+	note = make([]keyNote, 0, length)
+
+	for i := 0; i < length; i++ {
+		var field = obj.fields[i]
+
+		if !field.isNote {
+			continue
+		}
+
+		if field.name != "" {
+			note = append(note, keyNote{field.name, data.points[i]})
+		}
+	}
+
+	return note, nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////

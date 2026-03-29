@@ -83,11 +83,10 @@ func (obj *webReporter) getCountersList() string {
 
 	rows := make([]string, 0)
 
-	details := obj.storage.Select("counters", "id", "active", "fullName",
+	details := obj.storage.Select("computerCounters", "id", "active", "fullName",
 		"label", "name", "subName", "description")
 	// 	//details.SetTimeFilter(obj.filter.getData())
 	// 	details.SetFilter("counter = ?", id)
-	details.SetFilter("system = TRUE")
 	details.SetOrder("label")
 
 	var id int64

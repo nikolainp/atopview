@@ -52,11 +52,12 @@ func Open(stroragePath string) (obj *Storage, err error) {
 // FinishLoad ...
 func (obj *Storage) FinishLoad() {
 	finishLoad(obj.db, obj.metadata)
+	calcPivot(obj.db, obj.metadata, true)
 }
 
 // CalcPivot ...
 func (obj *Storage) CalcPivot() {
-	calcPivot(obj.db, obj.metadata)
+	calcPivot(obj.db, obj.metadata, false)
 }
 
 // FlushAll ...
@@ -158,18 +159,58 @@ func finishLoad(db *sql.DB, meta metaData) {
 			panic(err)
 		}
 	}
-
 }
 
-func calcPivot(db *sql.DB, meta metaData) {
-	for _, table := range meta.CalcPivot() {
-		if table.columns == "" {
-			if _, err := db.Exec(table.calc); err != nil {
+func calcPivot(db *sql.DB, meta metaData, isCreateColumns bool) {
+
+	getColumns := func(query string) []string {
+		rows := make([]string, 0)
+
+		res, err := db.Query(query)
+		if err != nil {
+			panic(err)
+		}
+		defer res.Close()
+
+		for res.Next() {
+			var value string
+
+			if err := res.Scan(&value); err != nil {
+				panic(err)
+			}
+			rows = append(rows, value)
+		}
+
+		return rows
+	}
+
+	pivotTable := func(data metaPivot) {
+		columns := getColumns(data.columns)
+		for i := range columns {
+			column := columns[i]
+
+			if isCreateColumns {
+				query := fmt.Sprintf(data.create, column)
+				if _, err := db.Exec(query); err != nil {
+					panic(err)
+				}
+			}
+			query := fmt.Sprintf(data.calc, column)
+			if _, err := db.Exec(query); err != nil {
 				panic(err)
 			}
 		}
 	}
 
+	for _, table := range meta.CalcPivot() {
+		if table.columns == "" {
+			if _, err := db.Exec(table.calc); err != nil {
+				panic(err)
+			}
+		} else {
+			pivotTable(table)
+		}
+	}
 }
 
 // func (obj *Storage) saveAll(dbPath string) {

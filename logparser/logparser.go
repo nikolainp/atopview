@@ -52,10 +52,17 @@ type logParser struct {
 	storage Storage
 	monitor Monitor
 
-	desc         map[entryLabel]dataDescription
-	details      dataDetails
-	counterID    map[string]int
-	computerInfo map[string]*computerInfo
+	desc             map[entryLabel]dataDescription
+	details          dataDetails
+	systemCounterID  map[string]int
+	processCounterID map[string]int
+	computerInfo     map[string]*computerInfo
+	processInfo      map[struct {
+		computer int
+		name     string
+	}]*processInfo
+
+	processCountersDataID map[struct{ counter, process int }]int
 }
 
 // NewLogParser ...
@@ -64,8 +71,17 @@ func NewLogParser(storage Storage) LogParser {
 	obj.storage = storage
 
 	obj.desc = getDataDescription()
-	obj.counterID = make(map[string]int, 100)
+	obj.systemCounterID = make(map[string]int, 100)
+	obj.processCounterID = make(map[string]int, 100)
 	obj.computerInfo = make(map[string]*computerInfo)
+	obj.processInfo = make(map[struct {
+		computer int
+		name     string
+	}]*processInfo, 1000)
+	obj.processCountersDataID = make(map[struct {
+		counter int
+		process int
+	}]int, 10000)
 
 	return obj
 }
@@ -125,6 +141,7 @@ func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 
 	obj.saveDetails()
 	obj.saveComputers()
+	obj.saveProcesses()
 
 	return nil
 }
@@ -151,6 +168,16 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 		id := obj.getCounterID(desc, computer, counter.key, subName)
 
 		obj.storage.WriteRow("dataPoints", data.timeStamp, id, counter.value)
+	}
+
+	if data.label == labelPRG {
+		notes, err := desc.getNotes(data)
+		if err != nil {
+			return err
+		}
+
+		process := obj.getProcess(computer.getID(), subName)
+		process.set(notes)
 	}
 
 	// TODO детали загрузки
@@ -181,8 +208,22 @@ func (obj *logParser) saveComputers() {
 		obj.storage.WriteRow("computers",
 			info.getID(), info.getName())
 	}
-
 }
+
+func (obj *logParser) saveProcesses() {
+
+	for _, info := range obj.processInfo {
+		obj.storage.WriteRow("processInfo",
+			info.getID(), true,
+			info.computer, info.pid, info.ppid,
+			info.name, info.commandLine,
+			info.exitCode,
+			info.startTime, info.endTime,
+		)
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 func (obj *logParser) getComputer(name string) *computerInfo {
 	if res, ok := obj.computerInfo[name]; ok {
@@ -196,36 +237,89 @@ func (obj *logParser) getComputer(name string) *computerInfo {
 	return res
 }
 
+func (obj *logParser) getProcess(computer int, name string) *processInfo {
+
+	key := struct {
+		computer int
+		name     string
+	}{computer, name}
+
+	if res, ok := obj.processInfo[key]; ok {
+		return res
+	}
+
+	id := len(obj.processInfo) + 1
+	res := newProcessInfo(id, computer, name)
+	obj.processInfo[key] = res
+
+	return res
+}
+
 func (obj *logParser) getCounterID(desc dataDescription, computer *computerInfo, name, subName string) int {
 
+	var id int
 	var longName string
 
 	label := desc.getLabel()
-	if subName == "" {
+
+	if desc.isSystem {
+		if subName == "" {
+			longName = fmt.Sprintf("%s^%s^%s",
+				computer.getName(), label, name)
+		} else {
+			longName = fmt.Sprintf("%s^%s^%s^%s",
+				computer.getName(), label, name, subName)
+		}
+
+		if id, ok := obj.systemCounterID[longName]; ok {
+			return id
+		}
+
+		id = len(obj.systemCounterID) + len(obj.processCountersDataID) + 1
+		details := desc.getDetails(name)
+
+		obj.storage.WriteRow("computerCounters", id,
+			details.active,
+			longName, computer.getID(),
+			label, name, subName,
+			details.description)
+		obj.systemCounterID[longName] = id
+
+		if details.isProperty {
+			obj.storage.WriteRow("computerInfo", computer.getID(), id)
+		}
+
+	} else {
 		longName = fmt.Sprintf("%s^%s^%s",
 			computer.getName(), label, name)
 
-	} else {
-		longName = fmt.Sprintf("%s^%s^%s^%s",
-			computer.getName(), label, name, subName)
-	}
+		counterID, ok := obj.processCounterID[longName]
+		if !ok {
+			counterID = len(obj.processCounterID) + 1
+			details := desc.getDetails(name)
 
-	if id, ok := obj.counterID[longName]; ok {
-		return id
-	}
+			obj.storage.WriteRow("processCounters", counterID,
+				details.active,
+				longName, computer.getID(),
+				label, name,
+				details.description)
+			obj.processCounterID[longName] = counterID
+		}
 
-	id := len(obj.counterID) + 1
-	details := desc.getDetails(name)
+		process := obj.getProcess(computer.getID(), subName)
 
-	obj.storage.WriteRow("counters", id,
-		desc.isSystem, details.active,
-		longName, computer.getID(),
-		label, name, subName,
-		details.description)
-	obj.counterID[longName] = id
+		dataKey := struct {
+			counter int
+			process int
+		}{counterID, process.getID()}
+		if id, ok := obj.processCountersDataID[dataKey]; ok {
+			return id
+		}
 
-	if details.isProperty {
-		obj.storage.WriteRow("computerInfo", computer.getID(), id)
+		id = len(obj.systemCounterID) + len(obj.processCountersDataID) + 1
+		obj.processCountersDataID[dataKey] = id
+
+		obj.storage.WriteRow("processCountersData", counterID, process.getID(), id)
 	}
 
 	return id
