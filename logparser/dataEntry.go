@@ -49,6 +49,8 @@ func newEntry(buf []byte) (res dataEntry, err error) {
 		var isParenthesis bool
 		for i, word := range bufSlice[6:] {
 			switch {
+			case len(word) == 0:
+				continue
 			case !isParenthesis && word[0] == '(' && word[len(word)-1] == ')':
 				res.points = append(res.points, bytes.Trim(word, "()"))
 			case !isParenthesis && word[0] == '(':

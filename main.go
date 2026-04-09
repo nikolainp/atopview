@@ -58,9 +58,8 @@ func main() {
 		wg.Go(func() {
 			worker := logreader.NewLogReader(conf.PathUtility, conf.PathLog)
 			worker.WithMonitor(monitor)
-			if errText, err := worker.ReadData(ctx, transfer); err != nil {
-				fmt.Fprintf(os.Stderr, "atop error: %v\n", err)
-				fmt.Fprintf(os.Stderr, "%s", errText)
+			if err := worker.ReadData(ctx, transfer); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 				cancel()
 			}
 			transfer.Close()

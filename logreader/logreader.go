@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os/exec"
 	"sync"
@@ -12,7 +13,7 @@ import (
 // LogReader ...
 type LogReader interface {
 	WithMonitor(Monitor)
-	ReadData(context.Context, DataTransfer) (string, error)
+	ReadData(context.Context, DataTransfer) (error)
 }
 
 // DataTransfer ...
@@ -62,11 +63,11 @@ func (obj *logReader) WithMonitor(monitor Monitor) {
 	obj.monitor = monitor
 }
 
-func (obj *logReader) ReadData(ctx context.Context, out DataTransfer) (errText string, err error) {
+func (obj *logReader) ReadData(ctx context.Context, out DataTransfer) (err error) {
 	var data io.Reader
 
 	if data, err = obj.openLogFile(); err != nil {
-		return "", err
+		return err
 	}
 
 	var wg sync.WaitGroup
@@ -77,11 +78,11 @@ func (obj *logReader) ReadData(ctx context.Context, out DataTransfer) (errText s
 
 	wg.Wait()
 
-	if errText, err := obj.closeLogFile(); err != nil {
-		return errText, err
+	if err = obj.closeLogFile(); err != nil {
+		return err
 	}
 
-	return errText, obj.err
+	return obj.err
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -103,21 +104,19 @@ func (obj *logReader) openLogFile() (data io.Reader, err error) {
 	return
 }
 
-func (obj *logReader) closeLogFile() (errText string, err error) {
+func (obj *logReader) closeLogFile() error {
 
-	if obj.err != nil {
-		if errText, err = readAllStream(obj.stderr); err != nil {
-			return
-		}
+	text, err := readAllStream(obj.stderr)
+	if err != nil {
+		return err
+	}
+	if len(text) != 0 {
+		return fmt.Errorf("atop: %s", text)
 	}
 
 	//err = obj.command.Wait()
 
-	if err == nil {
-		err = obj.err
-	}
-
-	return errText, err
+	return nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////
