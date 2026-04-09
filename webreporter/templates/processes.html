@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>/*{{.Title}}*/</title>
+
+        <link rel="stylesheet" href="/static/style.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/2.3.7/css/dataTables.dataTables.min.css">
+
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        <link rel="stylesheet" href="https://cdn.datatables.net/2.3.7/css/dataTables.dataTables.css" />
+        <script src="https://cdn.datatables.net/2.3.7/js/dataTables.js"></script>
+
+        <script type="text/javascript">
+            var dataTable;
+            var collapsedGroups = {};
+
+            function plotOnLoad(){
+                plotTable();
+            }
+
+            function plotTable() {
+                dataTable = new DataTable('#processesTable', {
+                    paging: false,
+                    info: true,
+                    searching: true,
+					ajax: {
+    				    url: '/data/processes/',
+        				dataSrc: ''
+    				},
+                    rowId: 'ID',
+					columns: [
+						{ title: "N",           data: 'Enable' },
+						{ title: "pid",         data: 'PID' },
+						{ title: "ppid",        data: 'PPID' },
+						{ title: "Name",        data: 'Name' },
+						{ title: "commandLine", data: 'CommandLine' },
+						{ title: "exitCode",    data: 'ExitCode' },
+						{ title: "startTime",   data: 'StartTime' },
+						{ title: "endTime",     data: 'EndTime' }
+					],
+                    order: [['Label', 'asc']],
+                    "columnDefs": [
+                        {
+                            "targets": 0,
+                            'render': function(data, type, full, meta) {
+                                if (data === "enable" || data === true) {
+                                    return '<input type="checkbox" checked="checked" class="checkbox_check">';
+                                } else {
+                                    return '<input type="checkbox"   class="checkbox_check">';
+                                }
+                            }
+                        }
+                    ]
+                });
+
+                dataTable.on('change', 'input[type="checkbox"]', function() {
+                    let $row = $(this).closest('tr');
+                    let rowData = dataTable.row($row).data();
+                    let cellData = this.checked;
+
+                    $.ajax({
+                        url: '/data/processes/',
+                        type: 'POST',
+                        data: {},
+                        dataType: 'json',
+                        beforeSend: function(xhr) {
+                            xhr.setRequestHeader("id", rowData.ID);
+                            xhr.setRequestHeader("active", cellData);
+                        },
+                        success: function(response) {
+                            console.log(response);
+                        },
+                        fail: function(jqXHR, textStatus, errorThrown) {
+                            console.error("Error status:", textStatus);
+                            console.error("Error message:", errorThrown);
+                            console.error("Response text:", jqXHR.responseText); 
+                        }
+                    });
+                });
+            }
+
+    </script>
+
+    </head>
+    <body onLoad="plotOnLoad()">
+        /*{{.DataFilter}}*/
+        /*{{.MainMenu}}*/
+
+        <table id="processesTable" class="display">
+        </table>
+    </body>
+</html>

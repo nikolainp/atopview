@@ -17,8 +17,8 @@ func (obj *webReporter) informationPage(w http.ResponseWriter, req *http.Request
 		MainMenu       string
 		Computers      map[int]string
 	}{
-		Title:      obj.title,
-		Version:    obj.version,
+		Title:      obj.details.Title,
+		Version:    obj.details.Version,
 		DataFilter: obj.filter.get(url),
 		MainMenu:   obj.mainMenu.get(url),
 		Computers:  obj.listComputers(),

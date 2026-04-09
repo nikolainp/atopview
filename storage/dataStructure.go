@@ -104,8 +104,8 @@ FROM (
     FROM dataPoints
     WHERE
         counter in (SELECT counter from computerInfo)
-        AND timeStamp < (SELECT timeTo from dataFilter)
-        AND timeStamp > (SELECT timeFrom from dataFilter)
+        AND timeStamp <= (SELECT timeTo from dataFilter)
+        AND timeStamp >= (SELECT timeFrom from dataFilter)
     GROUP BY counter
     ) as up
 WHERE
@@ -118,13 +118,13 @@ WHERE
 				{name: "id", datatype: "INTEGER"},
 				{name: "active", datatype: "BOOLEAN"},
 				{name: "computer", datatype: "INTEGER"},
-				{name: "pid"},
-				{name: "ppid"},
+				{name: "pid", datatype: "INTEGER"},
+				{name: "ppid", datatype: "INTEGER"},
 				{name: "name", datatype: "TEXT"},
 				{name: "commandLine", datatype: "TEXT"},
-				{name: "exitCode"},
-				{name: "startTime", isTimeFrom: true},
-				{name: "endTime", isTimeTo: true},
+				{name: "exitCode", datatype: "TEXT"},
+				{name: "startTime", datatype: "DATETIME", isTimeFrom: true},
+				{name: "endTime", datatype: "DATETIME", isTimeTo: true},
 			},
 			pivot: metaPivot{
 				columns: `
@@ -146,8 +146,8 @@ FROM (
         INNER JOIN processCountersData pc
         ON dp.counter = pc.data
         AND pc.counter = (SELECT id from processCounters WHERE name = "%[1]s")
-        AND dp.timeStamp < (SELECT timeTo from dataFilter)
-        AND dp.timeStamp > (SELECT timeFrom from dataFilter)
+        AND dp.timeStamp <= (SELECT timeTo from dataFilter)
+        AND dp.timeStamp >= (SELECT timeFrom from dataFilter)
     GROUP BY process
     ) as up
 WHERE

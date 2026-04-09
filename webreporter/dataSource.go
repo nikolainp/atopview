@@ -32,6 +32,17 @@ func (obj *webReporter) dataSource(w http.ResponseWriter, req *http.Request) {
 			obj.logger.Printf("post: %s, %s", id, active)
 			js = "{ \"response\": \"ok\"}"
 		}
+	case "processes":
+		switch req.Method {
+		case "GET":
+			js = obj.getProcessesList()
+		case "POST":
+			id := req.Header.Get("id")
+			active := req.Header.Get("active")
+			obj.setProcessActive(id, active)
+			obj.logger.Printf("post: %s, %s", id, active)
+			js = "{ \"response\": \"ok\"}"
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

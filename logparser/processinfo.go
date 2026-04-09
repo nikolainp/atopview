@@ -55,7 +55,11 @@ func (obj *processInfo) set(data []keyNote) (err error) {
 	for _, d := range data {
 		switch d.key {
 		case "endTime":
-			obj.endTime, err = bytesToTime(d.note)
+			var endTime time.Time
+			endTime, err = bytesToTime(d.note)
+			if endTime.After(obj.endTime) {
+				obj.endTime = endTime
+			}
 		case "exitCode":
 			obj.exitCode = string(d.note)
 		case "elapsedTime":

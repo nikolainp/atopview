@@ -27,16 +27,29 @@ type rootDetails struct {
 	ProcessingTime, FirstEventTime, LastEventTime time.Time
 }
 
-func (obj *webReporter) getRootDetails() (data rootDetails) {
+func (obj *webReporter) getDetails() {
+	{
+		data := obj.storage.Select("details")
+		data.Next(
+			&obj.details.Title, &obj.details.Version,
+			// &data.ProcessingSize, &data.ProcessingSpeed,
+			// &data.ProcessingTime,
+			&obj.details.FirstEventTime, &obj.details.LastEventTime)
 
-	details := obj.storage.Select("details")
-	details.Next(
-		&data.Title, &data.Version,
-		// &data.ProcessingSize, &data.ProcessingSpeed,
-		// &data.ProcessingTime,
-		&data.FirstEventTime, &data.LastEventTime)
+		data.Next()
+	}
+	{ // process counters
+		var id int
+		var name string
 
-	details.Next()
+		data := obj.storage.Select("processCounters", "id", "name")
 
-	return
+		obj.processCounters = make(map[int]string)
+		for data.Next(&id, &name) {
+			obj.processCounters[id] = name
+		}
+
+		data.Next()
+
+	}
 }

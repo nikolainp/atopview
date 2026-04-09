@@ -35,10 +35,11 @@ type webReporter struct {
 	templates *template.Template
 	logger    *log.Logger
 
-	title, version string
-	filter         *dataFilter
-	mainMenu       *navigation
-	counters       map[int]string
+	details          rootDetails
+	filter           *dataFilter
+	mainMenu         *navigation
+	computerCounters map[int]string
+	processCounters  map[int]string
 
 	port int
 }
@@ -60,18 +61,16 @@ func NewWebReporter(storage *storage.Storage) WebReporter {
 		ParseFS(templateContent, "templates/*.html")
 	checkErr(err)
 
-	details := obj.getRootDetails()
-	obj.title = details.Title
-	obj.version = details.Version
+	obj.getDetails()
 
-	obj.filter = newDataFilter(obj.templates.Lookup("dataFilter.html"), details.FirstEventTime, details.LastEventTime)
+	obj.filter = newDataFilter(obj.templates.Lookup("dataFilter.html"), obj.details.FirstEventTime, obj.details.LastEventTime)
 	obj.restoreDataFilter()
 
 	obj.mainMenu = newNavigation(obj.templates.Lookup("mainmenu.html"), []webAnchor{
 		{"/display", "data display"},
 		{"/counters", "system counters"},
 		{"/information", "system information"},
-		{"/processes", "processes counters"},
+		{"/processes", "processes"},
 	})
 
 	obj.srv = http.Server{
@@ -125,7 +124,7 @@ func (obj *webReporter) getHandlers() http.Handler {
 	sm.HandleFunc("/display", obj.dataDisplayPage)
 	sm.HandleFunc("/counters", obj.countersPage)
 	sm.HandleFunc("/information", obj.informationPage)
-	// sm.HandleFunc("/performance/{id}", obj.performance)
+	sm.HandleFunc("/processes", obj.processesPage)
 	// sm.HandleFunc("/servercontexts", obj.servercontexts)
 	// sm.HandleFunc("/servercontexts/{id}", obj.servercontexts)
 

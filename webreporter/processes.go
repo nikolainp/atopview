@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"text/template"
+	"time"
 )
 
-func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
+func (obj *webReporter) processesPage(w http.ResponseWriter, req *http.Request) {
 	url := req.URL.String()
 
 	data := struct {
@@ -23,7 +23,7 @@ func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err := obj.templates.ExecuteTemplate(w, "counters.html", data)
+	err := obj.templates.ExecuteTemplate(w, "processes.html", data)
 	checkErr(err)
 }
 
@@ -75,33 +75,64 @@ func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
 // TODO фильтрация по типу процесса (кластер, вебсервер, СУБД)
 // TODO сортировка групп
 
-func (obj *webReporter) getCountersList() string {
+func (obj *webReporter) getProcessesList() string {
+
+	var id, pid, ppid int64
+	var active bool
+	var name, commandLine, exitCode string
+	var startTime, endTime time.Time
 
 	rows := make([]string, 0)
+	values := make([]string, 0, len(obj.computerCounters))
+	columns := []string{
+		"id", "active", "pid", "ppid",
+		"name", "commandLine", "exitCode",
+		"startTime", "endTime",
+	}
+	pointers := []interface{}{
+		&id, &active, &pid, &ppid,
+		&name, &commandLine, &exitCode,
+		&startTime, &endTime,
+	}
+	startColumn := len(columns)
 
-	details := obj.storage.Select("computerCounters", "id", "active", "fullName",
-		"label", "name", "subName", "description")
-	// 	//details.SetTimeFilter(obj.filter.getData())
+	for i := range obj.processCounters {
+		name := obj.processCounters[i]
+		columns = append(columns, name+"_min", name+"_max")
+		pointers = append(pointers, new(float64), new(float64))
+	}
+
+	data := obj.storage.Select("processInfo", columns...)
+	// , )
+	data.SetTimeFilter(obj.filter.getData())
 	// 	details.SetFilter("counter = ?", id)
-	details.SetOrder("label")
+	data.SetOrder("pid")
 
-	var id int64
-	var active bool
-	var fullName, label, name, subName, description string
-	for details.Next(&id, &active, &fullName, &label, &name, &subName, &description) {
+	for data.Next(pointers...) {
+
+		for i := startColumn; i < len(pointers); i++ {
+			values = append(values, fmt.Sprintf(
+				"\"%s\": %g",
+				columns[i], *(pointers[12]).(*float64),
+			))
+		}
+
 		rows = append(rows, fmt.Sprintf(
-			"{\"ID\": \"%d\", \"Enable\": %t, \"FullName\": \"%s\", \"Label\": \"%s\", \"Name\": \"%s\", \"SubName\": \"%s\", \"Description\": \"%s\"}",
-			id, active,
-			template.JSEscapeString(fullName),
-			label, name, subName, description,
+			"{\"ID\": \"%d\", \"Enable\": %t, \"PID\": %d, \"PPID\": %d, \"Name\": \"%s\", \"CommandLine\": \"%s\", \"ExitCode\": \"%s\", \"StartTime\": \"%s\", \"EndTime\": \"%s\", %s}",
+			id, active, pid, ppid,
+			name, commandLine, exitCode,
+			startTime, endTime,
+			strings.Join(values, ", "),
 		))
+
+		values = values[:0]
 	}
 
 	return fmt.Sprintf("[%s]",
 		strings.Join(rows, ","))
 }
 
-func (obj *webReporter) setCounterActive(id, active string) {
+func (obj *webReporter) setProcessActive(id, active string) {
 
 	var argActive bool
 
@@ -112,7 +143,7 @@ func (obj *webReporter) setCounterActive(id, active string) {
 		argActive = false
 	}
 
-	update := obj.storage.Update("counters", "active", argActive)
+	update := obj.storage.Update("processInfo", "active", argActive)
 	update.SetFilter(fmt.Sprintf("id = %s", id))
 	update.Execute()
 

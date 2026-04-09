@@ -9,31 +9,21 @@ import (
 )
 
 func (obj *webReporter) dataDisplayPage(w http.ResponseWriter, req *http.Request) {
-	obj.counters = obj.listCounters()
+	obj.computerCounters = obj.listCounters()
 
 	url := req.URL.String()
-	// details := obj.getRootDetails()
 
 	data := struct {
-		Title, Version                 string
-		// ProcessingSize, ProcessingTime string
-		// ProcessingSpeed                string
-		// FirstEventTime, LastEventTime  string
-		DataFilter                     string
-		MainMenu                       string
-		Series                         map[int]string
+		Title, Version string
+		DataFilter string
+		MainMenu   string
+		Series     map[int]string
 	}{
-		Title:           obj.title,
-		Version:         obj.version,
-		// ProcessingSize:  byteCount(details.ProcessingSize),
-		// ProcessingTime:  details.ProcessingTime.Format("2006-01-02 15:04:05"),
-		// ProcessingSpeed: byteCount(details.ProcessingSpeed),
-		// FirstEventTime:  details.FirstEventTime.Format("2006-01-02 15:04:05"),
-		// LastEventTime:   details.LastEventTime.Format("2006-01-02 15:04:05"),
-		DataFilter:      obj.filter.get(url),
-		MainMenu:        obj.mainMenu.get(url),
-		//Processes:       toDataRows(obj.getProcesses()),
-		Series: obj.counters,
+		Title:   obj.details.Title,
+		Version: obj.details.Version,
+		DataFilter: obj.filter.get(url),
+		MainMenu:   obj.mainMenu.get(url),
+		Series: obj.computerCounters,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -107,7 +97,7 @@ func (obj *webReporter) getCountersStatistics() string {
 	) {
 		rows = append(rows, fmt.Sprintf(
 			"{\"Name\": \"%s\", \"Min\": %g, \"Max\": %g, \"Avg\": %g, \"Count\": %g}",
-			template.JSEscapeString(obj.counters[counter]),
+			template.JSEscapeString(obj.computerCounters[counter]),
 			cMin, cMax, cAvg, cCount,
 		))
 	}
