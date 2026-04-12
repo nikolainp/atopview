@@ -6,7 +6,8 @@ import (
 )
 
 type metaData interface {
-	InitDB() []string
+	InitDB(isCache bool) []string
+	SaveAll(schema string) []string
 	PostLoad() []string
 	CalcPivot() []metaPivot
 
@@ -60,14 +61,31 @@ func newMetadata() metaData {
 	return obj
 }
 
-func (obj *implMetaData) InitDB() []string {
+func (obj *implMetaData) InitDB(isCache bool) []string {
 	queries := make([]string, 0, len(obj.tables))
 
 	for _, table := range obj.tables {
+		if table.isCache && !isCache {
+			continue
+		}
+
 		queries = append(queries, table.getCreateSQL())
 		if table.indexes != nil {
 			queries = append(queries, table.indexes...)
 		}
+	}
+
+	return queries
+}
+
+func (obj *implMetaData) SaveAll(schema string) []string {
+	queries := make([]string, 0, len(obj.tables))
+
+	for _, table := range obj.tables {
+		if table.isCache {
+			continue
+		}
+		queries = append(queries, table.getInsertSelectSQL(schema))
 	}
 
 	return queries
@@ -143,93 +161,6 @@ func (obj *implMetaData) GetUpdateSQL(table string, fields ...any) (query string
 
 func (obj *implMetaData) init() {
 	obj.tables = getDataStructure()
-	// map[string]metaTable{
-	// 	"details": {name: "details",
-	// 		columns: []metaColumn{
-	// 			{name: "title", datatype: "TEXT"}, {name: "version", datatype: "TEXT"},
-	// 			{name: "processingSize", datatype: "INTEGER"},
-	// 			{name: "processingSpeed", datatype: "INTEGER"}, {name: "processingTime", datatype: "DATETIME"},
-	// 			{name: "firstEventTime", datatype: "DATETIME"}, {name: "lastEventTime", datatype: "DATETIME"},
-	// 		},
-	// 	},
-	// "processes": {name: "processes",
-	// 	columns: []metaColumn{
-	// 		{name: "name", datatype: "TEXT"}, {name: "catalog", datatype: "TEXT"}, {name: "process", datatype: "TEXT"},
-	// 		{name: "processID", datatype: "INTEGER"},
-	// 		{name: "processType", datatype: "TEXT"},
-	// 		{name: "pid", datatype: "TEXT"}, {name: "port", datatype: "TEXT"},
-	// 		{name: "UID", datatype: "TEXT"},
-	// 		{name: "serverName", datatype: "TEXT"}, {name: "IP", datatype: "TEXT"},
-	// 		{name: "firstEventTime", datatype: "DATETIME", isTimeFrom: true},
-	// 		{name: "lastEventTime", datatype: "DATETIME", isTimeTo: true},
-	// 	},
-	// },
-	// "workProcesses": {name: "workProcesses",
-	// 	columns: []metaColumn{
-	// 		{name: "processWID", datatype: "INTEGER"},
-	// 		{name: "name", datatype: "TEXT"},
-	// 		//{name: "rmngrID", datatype: "INTEGER"},
-	// 		{name: "pid", datatype: "TEXT", isCache: false},
-	// 		{name: "port", datatype: "TEXT", isCache: false},
-	// 		{name: "serverName", datatype: "TEXT", isCache: false},
-	// 		{name: "firstEventTime", datatype: "DATETIME", isTimeFrom: true},
-	// 		{name: "lastEventTime", datatype: "DATETIME", isTimeTo: true},
-	// 	},
-	// },
-	// "processesPerformance": {name: "processesPerformance",
-	// 	columns: []metaColumn{
-	// 		{name: "processWID", datatype: "INTEGER"},
-	// 		{name: "eventTime", datatype: "DATETIME", isTimeFrom: true, isTimeTo: true},
-	// 		{name: "cpu", datatype: "REAL"},
-	// 		{name: "queue_length", datatype: "REAL"},
-	// 		{name: "queue_lengthByCpu", datatype: "REAL"},
-	// 		{name: "memory_performance", datatype: "REAL"},
-	// 		{name: "disk_performance", datatype: "REAL"},
-	// 		{name: "response_time", datatype: "REAL"},
-	// 		{name: "average_response_time", datatype: "REAL"},
-	// 	},
-	// },
-	// "serverContexts": {name: "serverContexts",
-	// 	columns: []metaColumn{
-	// 		{name: "processID", datatype: "INTEGER"},
-	// 		{name: "contextID", datatype: "TEXT"}, {name: "name", datatype: "TEXT"},
-	// 		{name: "createTime", datatype: "DATETIME", isTimeFrom: true},
-	// 		{name: "renameTime", datatype: "DATETIME", isTimeTo: true},
-	// 		{name: "deleteTime", datatype: "DATETIME"},
-	// 	},
-	// },
-	// "eventSCOM": {name: "eventSCOM",
-	// 	columns: []metaColumn{
-	// 		{name: "processID", datatype: "INTEGER"},
-	// 		{name: "eventTime", datatype: "DATETIME", isTimeFrom: true, isTimeTo: true},
-	// 		{name: "event", datatype: "TEXT"},
-	// 		{name: "isCreate", datatype: "BOOLEAN"},
-	// 		{name: "isRename", datatype: "BOOLEAN"},
-	// 		{name: "contextID", datatype: "TEXT"},
-	// 		{name: "name", datatype: "TEXT"},
-	// 		{name: "rename", datatype: "TEXT"},
-	// 	},
-	// 	postSave: `
-	// 		UPDATE datafile.eventSCOM SET isRename = true
-	// 		WHERE isCreate = false
-	// 		AND contextID NOT IN (SELECT contextID FROM eventSCOM WHERE isRename = 1)
-	// 		AND (eventTime, contextID) IN (select MAX(eventTime), contextID FROM eventSCOM GROUP BY contextID)`,
-	// },
-	// "eventCALL": {name: "eventCALL",
-	// 	columns: []metaColumn{
-	// 		{name: "processID", datatype: "INTEGER"},
-	// 		{name: "beginEventTime", datatype: "DATETIME", isTimeFrom: true},
-	// 		{name: "endEventTime", datatype: "DATETIME", isTimeTo: true},
-	// 		{name: "duration", datatype: "INTEGER"},
-	// 		{name: "threadID", datatype: "INTEGER"},
-	// 		{name: "memory", datatype: "INTEGER"},
-	// 		{name: "memoryPeak", datatype: "INTEGER"},
-	// 		{name: "bytesIn", datatype: "INTEGER"},
-	// 		{name: "bytesOut", datatype: "INTEGER"},
-	// 		{name: "cpuTime", datatype: "INTEGER"},
-	// 	},
-	// },
-	// }
 
 	for tableName, table := range obj.tables {
 		for _, column := range table.columns {
@@ -253,7 +184,7 @@ func (obj *metaTable) getCreateSQL() string {
 		queryColumns = append(queryColumns, fmt.Sprintf("%s %s", obj.columns[i].name, obj.columns[i].datatype))
 	}
 
-	return fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s)", obj.name, strings.Join(queryColumns, ","))
+	return fmt.Sprintf("CREATE TABLE %s (%s)", obj.name, strings.Join(queryColumns, ","))
 }
 
 func (obj metaTable) getInsertValueSQL() string {
@@ -274,14 +205,15 @@ func (obj metaTable) getInsertValueSQL() string {
 	)
 }
 
-func (obj *metaTable) getInsertSelectSQL() string {
+func (obj *metaTable) getInsertSelectSQL(schema string) string {
 	queryColumns := make([]string, 0, len(obj.columns))
 
 	for i := range obj.columns {
 		queryColumns = append(queryColumns, obj.columns[i].name)
 	}
 
-	return fmt.Sprintf("INSERT INTO datafile.%s (%s) SELECT %s FROM %s",
+	return fmt.Sprintf("INSERT INTO %s.%s (%s) SELECT %s FROM %s",
+		schema,
 		obj.name, strings.Join(queryColumns, ","),
 		strings.Join(queryColumns, ","), obj.name,
 	)

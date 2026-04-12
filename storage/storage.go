@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3" //sqlite3
 )
@@ -26,33 +27,44 @@ func CreateCache() (*Storage, error) {
 		return nil, err
 	}
 
-	initDB(obj.db, obj.metadata)
+	initDB(obj.db, obj.metadata, true)
 
 	return obj, nil
 }
 
 // Open ...
-func Open(stroragePath string) (obj *Storage, err error) {
-
-	// FIXME база может не существовать
-	// if _, err := os.Stat(stroragePath); err != nil {
-	// 	return nil, fmt.Errorf("open storage: %v", err)
-	// }
+func Open(stroragePath string, isNew bool) (obj *Storage, err error) {
 
 	obj = newStorage()
-	if obj.db, err = openDB(stroragePath); err != nil {
-		return nil, err
-	}
+	if isNew {
+		if _, err := os.Stat(stroragePath); err == nil {
+			err = os.Remove(stroragePath)
+		}
+		if err != nil {
+			return nil, err
+		}
 
-	initDB(obj.db, obj.metadata)
+		if obj.db, err = createDB(stroragePath); err != nil {
+			return nil, err
+		}
+
+		initDB(obj.db, obj.metadata, false)
+	} else {
+		if _, err := os.Stat(stroragePath); err != nil {
+			return nil, fmt.Errorf("open storage: %v", err)
+		}
+
+		if obj.db, err = openDB(stroragePath); err != nil {
+			return nil, err
+		}
+	}
 
 	return obj, nil
 }
 
-// FinishLoad ...
-func (obj *Storage) FinishLoad() {
-	finishLoad(obj.db, obj.metadata)
-	calcPivot(obj.db, obj.metadata, true)
+// Close ...
+func (obj *Storage) Close() error {
+	return closeDB(obj.db)
 }
 
 // CalcPivot ...
@@ -61,24 +73,26 @@ func (obj *Storage) CalcPivot() {
 }
 
 // FlushAll ...
-// func (obj *Storage) FlushAll(stroragePath string) error {
+func (obj *Storage) FlushAll(stroragePath string) error {
 
-// 	if err := os.Remove(stroragePath); err != nil && !os.IsNotExist(err) {
-// 		return fmt.Errorf("clear storage: %v", err)
-// 	}
+	if err := os.Remove(stroragePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("clear storage: %v", err)
+	}
 
-// 	db, err := openDB(stroragePath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	initDB(db, obj.metadata)
-// 	db.Close()
+	db, err := openDB(stroragePath)
+	if err != nil {
+		return err
+	}
+	initDB(db, obj.metadata, false)
 
-// 	obj.saveAll(stroragePath)
+	obj.saveAll(stroragePath)
 
-// 	return nil
+	finishLoad(db, obj.metadata)
+	calcPivot(db, obj.metadata, true)
+	db.Close()
 
-// }
+	return nil
+}
 
 // WriteRow ...
 func (obj *Storage) WriteRow(table string, args ...any) {
@@ -112,6 +126,24 @@ func newStorage() *Storage {
 	return obj
 }
 
+func createDB(stroragePath string) (*sql.DB, error) {
+	var dataSource string
+	var err error
+
+	dataSource = "file:" + stroragePath + "?cache=private&nolock=1&psow=1"
+	db, err := sql.Open("sqlite3", dataSource)
+	if err != nil {
+		return nil, fmt.Errorf("create storage: %v", err)
+	}
+	if err = db.Ping(); err != nil {
+		return nil, fmt.Errorf("ping storage: %v", err)
+	}
+
+	setSession(db)
+
+	return db, nil
+}
+
 func openDB(stroragePath string) (*sql.DB, error) {
 	var dataSource string
 	var err error
@@ -130,6 +162,20 @@ func openDB(stroragePath string) (*sql.DB, error) {
 	if err = db.Ping(); err != nil {
 		return nil, fmt.Errorf("ping storage: %v", err)
 	}
+
+	setSession(db)
+
+	return db, nil
+}
+
+func closeDB(db *sql.DB) error {
+	return db.Close()
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+func setSession(db *sql.DB) {
+
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 
@@ -141,12 +187,10 @@ func openDB(stroragePath string) (*sql.DB, error) {
 			panic(err)
 		}
 	}
-
-	return db, nil
 }
 
-func initDB(db *sql.DB, meta metaData) {
-	for _, table := range meta.InitDB() {
+func initDB(db *sql.DB, meta metaData, isCache bool) {
+	for _, table := range meta.InitDB(isCache) {
 		if _, err := db.Exec(table); err != nil {
 			panic(err)
 		}
@@ -213,19 +257,19 @@ func calcPivot(db *sql.DB, meta metaData, isCreateColumns bool) {
 	}
 }
 
-// func (obj *Storage) saveAll(dbPath string) {
-// 	if _, err := obj.db.Exec("ATTACH DATABASE '" + dbPath + "' AS datafile"); err != nil {
-// 		panic(err)
-// 	}
+func (obj *Storage) saveAll(dbPath string) {
+	if _, err := obj.db.Exec("ATTACH DATABASE '" + dbPath + "' AS datafile"); err != nil {
+		panic(err)
+	}
 
-// 	parts := obj.metadata.SaveAll("datafile")
-// 	for _, part := range parts {
-// 		if _, err := obj.db.Exec(part); err != nil {
-// 			panic(fmt.Errorf("query: %s\nerror: %w", part, err))
-// 		}
-// 	}
+	parts := obj.metadata.SaveAll("datafile")
+	for _, part := range parts {
+		if _, err := obj.db.Exec(part); err != nil {
+			panic(fmt.Errorf("query: %s\nerror: %w", part, err))
+		}
+	}
 
-// 	if _, err := obj.db.Exec("DETACH datafile"); err != nil {
-// 		panic(err)
-// 	}
-// }
+	if _, err := obj.db.Exec("DETACH datafile"); err != nil {
+		panic(err)
+	}
+}

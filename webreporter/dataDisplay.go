@@ -15,15 +15,15 @@ func (obj *webReporter) dataDisplayPage(w http.ResponseWriter, req *http.Request
 
 	data := struct {
 		Title, Version string
-		DataFilter string
-		MainMenu   string
-		Series     map[int]string
+		DataFilter     string
+		MainMenu       string
+		Series         map[int]string
 	}{
-		Title:   obj.details.Title,
-		Version: obj.details.Version,
+		Title:      obj.details.Title,
+		Version:    obj.details.Version,
 		DataFilter: obj.filter.get(url),
 		MainMenu:   obj.mainMenu.get(url),
-		Series: obj.computerCounters,
+		Series:     obj.computerCounters,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -37,7 +37,7 @@ func (obj *webReporter) listCounters() map[int]string {
 
 	res := make(map[int]string, 0)
 
-	details := obj.storage.Select("counters", "id", "fullName")
+	details := obj.storage.Select("computerCounters", "id", "fullName")
 	// 	details.SetTimeFilter(obj.filter.getData())
 	details.SetFilter("active = TRUE")
 	details.SetOrder("id")
@@ -87,7 +87,7 @@ func (obj *webReporter) getCountersStatistics() string {
 		"MIN(value)", "MAX(value)", "AVG(value), COUNT(*)",
 	)
 	details.SetTimeFilter(obj.filter.getData())
-	details.SetFilter("counter IN (SELECT id FROM counters WHERE active = TRUE)")
+	details.SetFilter("counter IN (SELECT id FROM computerCounters WHERE active = TRUE)")
 	details.SetGroup("counter")
 	details.SetOrder("counter")
 

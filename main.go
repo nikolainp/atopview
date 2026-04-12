@@ -34,14 +34,14 @@ func main() {
 		return
 	}
 
-	storage, err := getStorage(conf.PathStorage)
-	if err != nil {
-		return
-	}
-
 	if !conf.ShowReportOnly {
 		var wg sync.WaitGroup
 
+		// storage, err := getStorage(conf.PathStorage, true)
+		storage, err := storage.CreateCache()
+		if err != nil {
+			return
+		}
 		monitor := monitor.NewMonitor()
 		monitor.Start(ctx, "Parse: %[6]s - %[5]s time: %[7]s")
 		transfer := logreader.NewDataTransfer(1024)
@@ -73,12 +73,22 @@ func main() {
 		}
 
 		monitor.WriteEvent("Start post processing\n")
-		storage.FinishLoad()
-		monitor.WriteEvent("Finish loading\n")
+		if err := storage.FlushAll(conf.PathStorage); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			cancel()
+		}
+		monitor.WriteEvent("Finish post processing\n")
 		monitor.Stop()
+
+		storage.Close()
 	}
 
+	storage, err := getStorage(conf.PathStorage, false)
+	if err != nil {
+		return
+	}
 	startWebServer(ctx, storage)
+	storage.Close()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -122,9 +132,9 @@ func getConfig(args []string) (config.Config, error) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-func getStorage(path string) (*storage.Storage, error) {
+func getStorage(path string, isNew bool) (*storage.Storage, error) {
 
-	db, err := storage.Open(path)
+	db, err := storage.Open(path, isNew)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Storage error: %v\n", err)
 	}
