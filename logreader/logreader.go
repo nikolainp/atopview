@@ -13,7 +13,7 @@ import (
 // LogReader ...
 type LogReader interface {
 	WithMonitor(Monitor)
-	ReadData(context.Context, DataTransfer) (error)
+	ReadData(context.Context, DataTransfer) error
 }
 
 // DataTransfer ...
@@ -192,25 +192,18 @@ func (obj *logReader) doRead(ctx context.Context, sIn io.Reader) {
 			return n, err
 		}
 
-		//		fmt.Println(string(buf[:n]))
-
 		return n, nil
 	}
 
-	for isBreak := false; !isBreak; {
+	for {
 		buf := obj.transfer.GetBuffer()
 		n, err := readBuffer(*buf)
 		if n == 0 || err != nil {
 			obj.err = err
 			break
-		} else {
-
-			select {
-			case <-ctx.Done():
-				isBreak = true
-			default:
-				obj.transfer.Send(ctx, buf, n)
-			}
+		}
+		if !obj.transfer.Send(ctx, buf, n) {
+			break
 		}
 	}
 

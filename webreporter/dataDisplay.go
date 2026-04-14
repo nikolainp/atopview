@@ -1,10 +1,10 @@
 package webreporter
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
-	"text/template"
 	"time"
 )
 
@@ -97,13 +97,15 @@ func (obj *webReporter) getCountersStatistics() string {
 	) {
 		rows = append(rows, fmt.Sprintf(
 			"{\"Name\": \"%s\", \"Min\": %g, \"Max\": %g, \"Avg\": %g, \"Count\": %g}",
-			template.JSEscapeString(obj.computerCounters[counter]),
+			jsonEscape(obj.computerCounters[counter]),
 			cMin, cMax, cAvg, cCount,
 		))
 	}
 
 	return fmt.Sprintf("[%s]", strings.Join(rows, ","))
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 func byteCount(b int64) string {
 	const unit = 1000
@@ -117,4 +119,13 @@ func byteCount(b int64) string {
 	}
 	return fmt.Sprintf("%.1f%cb",
 		float64(b)/float64(div), "kMGTPE"[exp])
+}
+
+func jsonEscape(i string) string {
+	b, err := json.Marshal(i)
+	if err != nil {
+		panic(err)
+	}
+	// Trim the beginning and trailing " character
+	return string(b[1 : len(b)-1])
 }

@@ -3,6 +3,7 @@ package logparser
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -52,6 +53,9 @@ type logParser struct {
 	storage Storage
 	monitor Monitor
 
+	err      error
+	transfer *dataTransfer
+
 	desc             map[entryLabel]dataDescription
 	details          dataDetails
 	systemCounterID  map[string]int
@@ -99,6 +103,75 @@ func (obj *logParser) WithDetails(title, version string) {
 
 func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 
+	var wg sync.WaitGroup
+	obj.transfer = newDataTransfer(ctx.Done, 10000)
+
+	wg.Go(func() { obj.doRead(ctx, in) })
+	wg.Go(func() { obj.doWrite() })
+
+	wg.Wait()
+
+	return obj.err
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+type dataTransfer struct {
+	done func() <-chan struct{}
+	ch   chan struct {
+		table string
+		args  []any
+	}
+}
+
+func newDataTransfer(done func() <-chan struct{}, size int) *dataTransfer {
+	obj := new(dataTransfer)
+	obj.done = done
+	obj.ch = make(chan struct {
+		table string
+		args  []any
+	}, size)
+	return obj
+}
+func (obj *dataTransfer) Close() {
+	close(obj.ch)
+}
+func (obj *dataTransfer) Send(table string, args ...any) (ok bool) {
+	select {
+	case <-obj.done():
+		return false
+	case obj.ch <- struct {
+		table string
+		args  []any
+	}{table: table, args: args}:
+		return true
+	}
+}
+func (obj *dataTransfer) Receive() (struct {
+	table string
+	args  []any
+}, bool) {
+	select {
+	case <-obj.done():
+		return struct {
+			table string
+			args  []any
+		}{}, false
+	case data, ok := <-obj.ch:
+		if !ok {
+			return struct {
+				table string
+				args  []any
+			}{}, false
+		}
+		return data, ok
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+func (obj *logParser) doRead(ctx context.Context, in DataTransfer) {
+
 	isFirstLine := true
 
 	readRecord := func(buf []byte, n int) error {
@@ -133,7 +206,8 @@ func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 		} else {
 			// fmt.Println(string(buf))
 			if err := readRecord(*buf, n); err != nil {
-				return err
+				obj.err = err
+				return
 			}
 			in.Free(buf)
 		}
@@ -143,7 +217,18 @@ func (obj *logParser) ReadData(ctx context.Context, in DataTransfer) error {
 	obj.saveComputers()
 	obj.saveProcesses()
 
-	return nil
+	obj.transfer.Close()
+
+}
+
+func (obj *logParser) doWrite() {
+	for {
+		row, ok := obj.transfer.Receive()
+		if !ok {
+			break
+		}
+		obj.storage.WriteRow(row.table, row.args...)
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -167,7 +252,7 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 
 		id := obj.getCounterID(desc, computer, counter.key, subName)
 
-		obj.storage.WriteRow("dataPoints", data.timeStamp, id, counter.value)
+		obj.transfer.Send("dataPoints", data.timeStamp, id, counter.value)
 	}
 
 	if data.label == labelPRG {
@@ -189,11 +274,11 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 
 func (obj *logParser) saveDetails() {
 
-	obj.storage.WriteRow("dataFilter",
+	obj.transfer.Send("dataFilter",
 		obj.details.firstEventTime,
 		obj.details.lastEventTime,
 	)
-	obj.storage.WriteRow("details",
+	obj.transfer.Send("details",
 		obj.details.title,
 		obj.details.version,
 		obj.details.firstEventTime,
@@ -205,7 +290,7 @@ func (obj *logParser) saveDetails() {
 func (obj *logParser) saveComputers() {
 
 	for _, info := range obj.computerInfo {
-		obj.storage.WriteRow("computers",
+		obj.transfer.Send("computers",
 			info.getID(), info.getName())
 	}
 }
@@ -213,7 +298,7 @@ func (obj *logParser) saveComputers() {
 func (obj *logParser) saveProcesses() {
 
 	for _, info := range obj.processInfo {
-		obj.storage.WriteRow("processInfo",
+		obj.transfer.Send("processInfo",
 			info.getID(), true,
 			info.computer, info.pid, info.ppid,
 			info.name, info.commandLine,
@@ -278,7 +363,7 @@ func (obj *logParser) getCounterID(desc dataDescription, computer *computerInfo,
 		id = len(obj.systemCounterID) + len(obj.processCountersDataID) + 1
 		details := desc.getDetails(name)
 
-		obj.storage.WriteRow("computerCounters", id,
+		obj.transfer.Send("computerCounters", id,
 			details.active,
 			longName, computer.getID(),
 			label, name, subName,
@@ -286,7 +371,7 @@ func (obj *logParser) getCounterID(desc dataDescription, computer *computerInfo,
 		obj.systemCounterID[longName] = id
 
 		if details.isProperty {
-			obj.storage.WriteRow("computerInfo", computer.getID(), id)
+			obj.transfer.Send("computerInfo", computer.getID(), id)
 		}
 
 	} else {
@@ -298,7 +383,7 @@ func (obj *logParser) getCounterID(desc dataDescription, computer *computerInfo,
 			counterID = len(obj.processCounterID) + 1
 			details := desc.getDetails(name)
 
-			obj.storage.WriteRow("processCounters", counterID,
+			obj.transfer.Send("processCounters", counterID,
 				details.active,
 				longName, computer.getID(),
 				label, name,
@@ -319,7 +404,7 @@ func (obj *logParser) getCounterID(desc dataDescription, computer *computerInfo,
 		id = len(obj.systemCounterID) + len(obj.processCountersDataID) + 1
 		obj.processCountersDataID[dataKey] = id
 
-		obj.storage.WriteRow("processCountersData", counterID, process.getID(), id)
+		obj.transfer.Send("processCountersData", counterID, process.getID(), id)
 	}
 
 	return id

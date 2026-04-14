@@ -120,7 +120,9 @@ func (obj *webReporter) getProcessesList() string {
 		rows = append(rows, fmt.Sprintf(
 			"{\"ID\": \"%d\", \"Enable\": %t, \"PID\": %d, \"PPID\": %d, \"Name\": \"%s\", \"CommandLine\": \"%s\", \"ExitCode\": \"%s\", \"StartTime\": \"%s\", \"EndTime\": \"%s\", %s}",
 			id, active, pid, ppid,
-			name, commandLine, exitCode,
+			jsonEscape(name),
+			jsonEscape(commandLine),
+			exitCode,
 			startTime, endTime,
 			strings.Join(values, ", "),
 		))
@@ -129,7 +131,7 @@ func (obj *webReporter) getProcessesList() string {
 	}
 
 	return fmt.Sprintf("[%s]",
-		strings.Join(rows, ","))
+		strings.Join(rows, ",\n"))
 }
 
 func (obj *webReporter) setProcessActive(id, active string) {
