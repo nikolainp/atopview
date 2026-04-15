@@ -126,6 +126,28 @@ WHERE
 				{name: "startTime", datatype: "DATETIME", isTimeFrom: true},
 				{name: "endTime", datatype: "DATETIME", isTimeTo: true},
 			},
+			postLoad: []string{
+				`
+UPDATE processInfo
+SET endTime = up.endTime
+FROM ( 
+    SELECT
+        pcd.process as process,
+        MAX(dp.timeStamp) as endTime
+    FROM
+        processCountersData pcd
+        INNER JOIN dataPoints dp
+            ON pcd.data = dp.counter
+    GROUP BY 
+        pcd.process
+    HAVING
+        MAX(dp.timeStamp) != (SELECT MAX(timeStamp) FROM dataPoints)
+    ) as up 
+WHERE
+    processInfo.id = up.process
+    AND julianday(processInfo.endTime) = 1721425.5
+`,
+			},
 			pivot: metaPivot{
 				columns: `
 SELECT name FROM processCounters ORDER BY name;

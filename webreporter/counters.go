@@ -112,7 +112,7 @@ func (obj *webReporter) setCounterActive(id, active string) {
 		argActive = false
 	}
 
-	update := obj.storage.Update("counters", "active", argActive)
+	update := obj.storage.Update("computerCounters", "active", argActive)
 	update.SetFilter(fmt.Sprintf("id = %s", id))
 	update.Execute()
 
