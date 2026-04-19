@@ -62,18 +62,18 @@ func (obj *dataFilter) getData() (filter struct{ From, To time.Time }) {
 	return
 }
 
-func (obj *dataFilter) getStartTime(tt time.Time) time.Time {
-	if obj.startTime.Before(tt) {
-		return tt
-	}
+// func (obj *dataFilter) getStartTime(tt time.Time) time.Time {
+// 	if obj.startTime.Before(tt) {
+// 		return tt
+// 	}
 
-	return obj.startTime
-}
+// 	return obj.startTime
+// }
 
-func (obj *dataFilter) getFinishTime(tt time.Time) time.Time {
-	if obj.finishTime.After(tt) {
-		return tt
-	}
+// func (obj *dataFilter) getFinishTime(tt time.Time) time.Time {
+// 	if obj.finishTime.After(tt) {
+// 		return tt
+// 	}
 
-	return obj.finishTime
-}
+// 	return obj.finishTime
+// }

@@ -29,7 +29,7 @@ func getDataStructure() map[string]metaTable {
 				{name: "name", datatype: "TEXT"},
 			},
 		},
-		"computerCounters": {name: "computerCounters",
+		"systemCounters": {name: "systemCounters",
 			columns: []metaColumn{
 				{name: "id", datatype: "INTEGER"},
 				{name: "active", datatype: "BOOLEAN"},
@@ -87,7 +87,7 @@ func getDataStructure() map[string]metaTable {
 				`
 UPDATE computerInfo
 SET label = up.label, name = up.name, subName = up.subName
-FROM computerCounters up
+FROM systemCounters up
 WHERE
     computerInfo.counter = up. id
 `,

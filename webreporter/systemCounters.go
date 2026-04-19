@@ -2,31 +2,28 @@ package webreporter
 
 import (
 	"fmt"
-	"maps"
 	"net/http"
-	"slices"
 	"strings"
-	"time"
+	"text/template"
 )
 
-func (obj *webReporter) processesPage(w http.ResponseWriter, req *http.Request) {
+func (obj *webReporter) systemCountersPage(w http.ResponseWriter, req *http.Request) {
 	url := req.URL.String()
 
 	data := struct {
 		Title, Version string
 		DataFilter     string
 		MainMenu       string
-		Columns        map[int]string
+		Series         map[int]string
 	}{
 		Title:      obj.details.Title,
 		Version:    obj.details.Version,
 		DataFilter: obj.filter.get(url),
 		MainMenu:   obj.mainMenu.get(url),
-		Columns:    obj.processCounters,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err := obj.templates.ExecuteTemplate(w, "processes.html", data)
+	err := obj.templates.ExecuteTemplate(w, "systemCounters.html", data)
 	checkErr(err)
 }
 
@@ -78,69 +75,33 @@ func (obj *webReporter) processesPage(w http.ResponseWriter, req *http.Request) 
 // TODO фильтрация по типу процесса (кластер, вебсервер, СУБД)
 // TODO сортировка групп
 
-func (obj *webReporter) getProcessesList() string {
-
-	var id, pid, ppid int64
-	var active bool
-	var name, commandLine, exitCode string
-	var startTime, endTime time.Time
+func (obj *webReporter) getSystemCountersList() string {
 
 	rows := make([]string, 0)
-	values := make([]string, 0, len(obj.computerCounters))
-	columns := []string{
-		"id", "active", "pid", "ppid",
-		"name", "commandLine", "exitCode",
-		"startTime", "endTime",
-	}
-	pointers := []interface{}{
-		&id, &active, &pid, &ppid,
-		&name, &commandLine, &exitCode,
-		&startTime, &endTime,
-	}
-	startColumn := len(columns)
 
-	for _, i := range slices.Sorted(maps.Keys(obj.processCounters)) {
-		name := obj.processCounters[i]
-		columns = append(columns, name+"_min", name+"_max")
-		pointers = append(pointers, new(float64), new(float64))
-	}
-
-	data := obj.storage.Select("processInfo", columns...)
-	// , )
-	data.SetTimeFilter(obj.filter.getData())
+	details := obj.storage.Select("systemCounters", "id", "active", "fullName",
+		"label", "name", "subName", "description")
+	// 	//details.SetTimeFilter(obj.filter.getData())
 	// 	details.SetFilter("counter = ?", id)
-	data.SetOrder("pid")
+	details.SetOrder("label")
 
-	for data.Next(pointers...) {
-
-		for i := startColumn; i < len(pointers); i++ {
-			values = append(values, fmt.Sprintf(
-				//				"\"%s\": %g",
-				"%g",
-				//columns[i],
-				*(pointers[i]).(*float64),
-			))
-		}
-
+	var id int64
+	var active bool
+	var fullName, label, name, subName, description string
+	for details.Next(&id, &active, &fullName, &label, &name, &subName, &description) {
 		rows = append(rows, fmt.Sprintf(
-			//			"{\"ID\": \"%d\", \"Enable\": %t, \"PID\": %d, \"PPID\": %d, \"Name\": \"%s\", \"CommandLine\": \"%s\", \"ExitCode\": \"%s\", \"StartTime\": \"%s\", \"EndTime\": \"%s\", %s}",
-			"[\"%d\",%t,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\", %s]",
-			id, active, pid, ppid,
-			jsonEscape(name),
-			jsonEscape(commandLine),
-			exitCode,
-			startTime, endTime,
-			strings.Join(values, ", "),
+			"{\"ID\": \"%d\", \"Enable\": %t, \"FullName\": \"%s\", \"Label\": \"%s\", \"Name\": \"%s\", \"SubName\": \"%s\", \"Description\": \"%s\"}",
+			id, active,
+			template.JSEscapeString(fullName),
+			label, name, subName, description,
 		))
-
-		values = values[:0]
 	}
 
 	return fmt.Sprintf("[%s]",
-		strings.Join(rows, ",\n"))
+		strings.Join(rows, ","))
 }
 
-func (obj *webReporter) setProcessActive(id, active string) {
+func (obj *webReporter) setSystemCounterActive(id, active string) {
 
 	var argActive bool
 
@@ -151,7 +112,7 @@ func (obj *webReporter) setProcessActive(id, active string) {
 		argActive = false
 	}
 
-	update := obj.storage.Update("processInfo", "active", argActive)
+	update := obj.storage.Update("systemCounters", "active", argActive)
 	update.SetFilter(fmt.Sprintf("id = %s", id))
 	update.Execute()
 

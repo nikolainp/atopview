@@ -299,7 +299,7 @@ func (obj *logParser) saveProcesses() {
 
 	for _, info := range obj.processInfo {
 		obj.transfer.Send("processInfo",
-			info.getID(), true,
+			info.getID(), false,
 			info.computer, info.pid, info.ppid,
 			info.name, info.commandLine,
 			info.exitCode,
@@ -363,7 +363,7 @@ func (obj *logParser) getCounterID(desc dataDescription, computer *computerInfo,
 		id = len(obj.systemCounterID) + len(obj.processCountersDataID) + 1
 		details := desc.getDetails(name)
 
-		obj.transfer.Send("computerCounters", id,
+		obj.transfer.Send("systemCounters", id,
 			details.active,
 			longName, computer.getID(),
 			label, name, subName,

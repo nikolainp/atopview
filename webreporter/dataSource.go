@@ -21,14 +21,14 @@ func (obj *webReporter) dataSource(w http.ResponseWriter, req *http.Request) {
 	case "information":
 		id := req.Header.Get("id")
 		js = obj.getInformation(id)
-	case "counters":
+	case "systemCounters":
 		switch req.Method {
 		case "GET":
-			js = obj.getCountersList()
+			js = obj.getSystemCountersList()
 		case "POST":
 			id := req.Header.Get("id")
 			active := req.Header.Get("active")
-			obj.setCounterActive(id, active)
+			obj.setSystemCounterActive(id, active)
 			obj.logger.Printf("post: %s, %s", id, active)
 			js = "{ \"response\": \"ok\"}"
 		}
@@ -40,6 +40,17 @@ func (obj *webReporter) dataSource(w http.ResponseWriter, req *http.Request) {
 			id := req.Header.Get("id")
 			active := req.Header.Get("active")
 			obj.setProcessActive(id, active)
+			obj.logger.Printf("post: %s, %s", id, active)
+			js = "{ \"response\": \"ok\"}"
+		}
+	case "processCounters":
+		switch req.Method {
+		case "GET":
+			js = obj.getProcessCountersList()
+		case "POST":
+			id := req.Header.Get("id")
+			active := req.Header.Get("active")
+			obj.setProcessCounterActive(id, active)
 			obj.logger.Printf("post: %s, %s", id, active)
 			js = "{ \"response\": \"ok\"}"
 		}

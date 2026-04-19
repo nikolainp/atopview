@@ -29,7 +29,7 @@
                     info: true,
                     searching: true,
 					ajax: {
-    				    url: '/data/counters/',
+    				    url: '/data/systemCounters/',
         				dataSrc: ''
     				},
                     rowId: 'ID',
@@ -85,7 +85,7 @@
                     let cellData = this.checked;
 
                     $.ajax({
-                        url: '/data/counters/',
+                        url: '/data/systemCounters/',
                         type: 'POST',
                         data: {},
                         dataType: 'json',

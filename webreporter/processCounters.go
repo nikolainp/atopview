@@ -7,7 +7,7 @@ import (
 	"text/template"
 )
 
-func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
+func (obj *webReporter) processCountersPage(w http.ResponseWriter, req *http.Request) {
 	url := req.URL.String()
 
 	data := struct {
@@ -23,7 +23,7 @@ func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err := obj.templates.ExecuteTemplate(w, "counters.html", data)
+	err := obj.templates.ExecuteTemplate(w, "processCounters.html", data)
 	checkErr(err)
 }
 
@@ -75,25 +75,25 @@ func (obj *webReporter) countersPage(w http.ResponseWriter, req *http.Request) {
 // TODO фильтрация по типу процесса (кластер, вебсервер, СУБД)
 // TODO сортировка групп
 
-func (obj *webReporter) getCountersList() string {
+func (obj *webReporter) getProcessCountersList() string {
 
 	rows := make([]string, 0)
 
-	details := obj.storage.Select("computerCounters", "id", "active", "fullName",
-		"label", "name", "subName", "description")
+	details := obj.storage.Select("processCounters", "id", "active", "fullName",
+		"label", "name", "description")
 	// 	//details.SetTimeFilter(obj.filter.getData())
 	// 	details.SetFilter("counter = ?", id)
 	details.SetOrder("label")
 
 	var id int64
 	var active bool
-	var fullName, label, name, subName, description string
-	for details.Next(&id, &active, &fullName, &label, &name, &subName, &description) {
+	var fullName, label, name, description string
+	for details.Next(&id, &active, &fullName, &label, &name, &description) {
 		rows = append(rows, fmt.Sprintf(
-			"{\"ID\": \"%d\", \"Enable\": %t, \"FullName\": \"%s\", \"Label\": \"%s\", \"Name\": \"%s\", \"SubName\": \"%s\", \"Description\": \"%s\"}",
+			"{\"ID\": \"%d\", \"Enable\": %t, \"FullName\": \"%s\", \"Label\": \"%s\", \"Name\": \"%s\", \"Description\": \"%s\"}",
 			id, active,
 			template.JSEscapeString(fullName),
-			label, name, subName, description,
+			label, name, description,
 		))
 	}
 
@@ -101,7 +101,7 @@ func (obj *webReporter) getCountersList() string {
 		strings.Join(rows, ","))
 }
 
-func (obj *webReporter) setCounterActive(id, active string) {
+func (obj *webReporter) setProcessCounterActive(id, active string) {
 
 	var argActive bool
 
@@ -112,7 +112,7 @@ func (obj *webReporter) setCounterActive(id, active string) {
 		argActive = false
 	}
 
-	update := obj.storage.Update("computerCounters", "active", argActive)
+	update := obj.storage.Update("processCounters", "active", argActive)
 	update.SetFilter(fmt.Sprintf("id = %s", id))
 	update.Execute()
 

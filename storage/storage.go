@@ -37,7 +37,7 @@ func Open(stroragePath string, isNew bool) (obj *Storage, err error) {
 
 	obj = newStorage()
 	if isNew {
-		if _, err := os.Stat(stroragePath); err == nil {
+		if _, err = os.Stat(stroragePath); err == nil {
 			err = os.Remove(stroragePath)
 		}
 		if err != nil {
