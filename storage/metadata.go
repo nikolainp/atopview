@@ -37,8 +37,10 @@ type metaTable struct {
 }
 
 type metaColumn struct {
-	name     string
-	datatype string
+	name      string
+	datatype  string
+	value     string
+	isNotNull bool
 
 	isService bool
 
@@ -181,7 +183,17 @@ func (obj *metaTable) getCreateSQL() string {
 
 	queryColumns := make([]string, 0, len(obj.columns))
 	for i := range obj.columns {
-		queryColumns = append(queryColumns, fmt.Sprintf("%s %s", obj.columns[i].name, obj.columns[i].datatype))
+		meta := obj.columns[i]
+
+		column := fmt.Sprintf("%s %s", meta.name, meta.datatype)
+		if meta.value != "" {
+			column += " DEFAULT " + meta.value
+		}
+		if meta.isNotNull {
+			column += " NOT NULL"
+		}
+
+		queryColumns = append(queryColumns, column)
 	}
 
 	return fmt.Sprintf("CREATE TABLE %s (%s)", obj.name, strings.Join(queryColumns, ","))

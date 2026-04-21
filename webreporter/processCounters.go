@@ -112,8 +112,17 @@ func (obj *webReporter) setProcessCounterActive(id, active string) {
 		argActive = false
 	}
 
-	update := obj.storage.Update("processCounters", "active", argActive)
-	update.SetFilter(fmt.Sprintf("id = %s", id))
-	update.Execute()
+	{
+		update := obj.storage.Update("processCounters", "active", argActive)
+		update.SetFilter(fmt.Sprintf("id = %s", id))
+		update.Execute()
+	}
+
+	{
+		update := obj.storage.Update("processCountersData", "active", true)
+		update.SetFilter("counter IN (SELECT id FROM processCounters WHERE active = TRUE)")
+		update.SetFilter("process IN (SELECT id FROM processInfo WHERE active = TRUE)")
+		update.Execute()
+	}
 
 }

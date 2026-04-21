@@ -9,7 +9,7 @@ import (
 )
 
 func (obj *webReporter) dataDisplayPage(w http.ResponseWriter, req *http.Request) {
-	obj.computerCounters = obj.listCounters()
+	obj.counters = obj.listCounters()
 
 	url := req.URL.String()
 
@@ -23,7 +23,7 @@ func (obj *webReporter) dataDisplayPage(w http.ResponseWriter, req *http.Request
 		Version:    obj.details.Version,
 		DataFilter: obj.filter.get(url),
 		MainMenu:   obj.mainMenu.get(url),
-		Series:     obj.computerCounters,
+		Series:     obj.counters,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -37,15 +37,29 @@ func (obj *webReporter) listCounters() map[int]string {
 
 	res := make(map[int]string, 0)
 
-	details := obj.storage.Select("computerCounters", "id", "fullName")
-	// 	details.SetTimeFilter(obj.filter.getData())
-	details.SetFilter("active = TRUE")
-	details.SetOrder("id")
+	{
+		details := obj.storage.Select("systemCounters", "id", "fullName")
+		details.SetFilter("active = TRUE")
+		details.SetOrder("id")
 
-	var id int
-	var fullName string
-	for details.Next(&id, &fullName) {
-		res[id] = fullName
+		var id int
+		var fullName string
+		for details.Next(&id, &fullName) {
+			res[id] = fullName
+		}
+	}
+
+	{
+		details := obj.storage.Select("processCountersData", "data", "fullName")
+		details.SetFilter("counter IN (SELECT id FROM processCounters WHERE active = TRUE)")
+		details.SetFilter("process IN (SELECT id FROM processInfo WHERE active = TRUE)")
+		details.SetOrder("data")
+
+		var id int
+		var fullName string
+		for details.Next(&id, &fullName) {
+			res[id] = fullName
+		}
 	}
 
 	return res
@@ -87,7 +101,7 @@ func (obj *webReporter) getCountersStatistics() string {
 		"MIN(value)", "MAX(value)", "AVG(value), COUNT(*)",
 	)
 	details.SetTimeFilter(obj.filter.getData())
-	details.SetFilter("counter IN (SELECT id FROM computerCounters WHERE active = TRUE)")
+	details.SetFilter("counter IN (SELECT id FROM systemCounters WHERE active = TRUE UNION ALL SELECT data FROM processCountersData WHERE active = TRUE)")
 	details.SetGroup("counter")
 	details.SetOrder("counter")
 
@@ -97,7 +111,7 @@ func (obj *webReporter) getCountersStatistics() string {
 	) {
 		rows = append(rows, fmt.Sprintf(
 			"{\"Name\": \"%s\", \"Min\": %g, \"Max\": %g, \"Avg\": %g, \"Count\": %g}",
-			jsonEscape(obj.computerCounters[counter]),
+			jsonEscape(obj.counters[counter]),
 			cMin, cMax, cAvg, cCount,
 		))
 	}

@@ -54,12 +54,33 @@ func getDataStructure() map[string]metaTable {
 		},
 		"processCountersData": {name: "processCountersData",
 			columns: []metaColumn{
+				{name: "active", datatype: "BOOLEAN", value: "FALSE", isNotNull: true, isService: true},
 				{name: "counter", datatype: "INTEGER"},
 				{name: "process", datatype: "INTEGER"},
 				{name: "data", datatype: "INTEGER"},
+				{name: "fullName", datatype: "TEXT", isService: true},
 			},
 			indexes: []string{
 				"CREATE UNIQUE INDEX IF NOT EXISTS processCountersData1 ON processCountersData (counter, process, data)",
+			},
+			postLoad: []string{
+				`
+UPDATE processCountersData
+SET fullName = up.fullName
+FROM (
+	SELECT
+		data,
+		concat(pc.fullName, "^", pi.name, "(", pi.pid, ")") as fullName
+	FROM
+		processCountersData pcd
+		INNER JOIN processCounters pc
+			ON pcd.counter = pc.id
+		INNER JOIN processInfo pi
+			ON pcd.process = pi.id
+	) as up
+WHERE
+	processCountersData.data = up.data
+				`,
 			},
 		},
 		"dataPoints": {name: "dataPoints",
@@ -116,7 +137,7 @@ WHERE
 		"processInfo": {name: "processInfo",
 			columns: []metaColumn{
 				{name: "id", datatype: "INTEGER"},
-				{name: "active", datatype: "BOOLEAN"},
+				{name: "active", datatype: "BOOLEAN", value: "FALSE", isNotNull: true, isService: true},
 				{name: "computer", datatype: "INTEGER"},
 				{name: "pid", datatype: "INTEGER"},
 				{name: "ppid", datatype: "INTEGER"},

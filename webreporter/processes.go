@@ -86,7 +86,7 @@ func (obj *webReporter) getProcessesList() string {
 	var startTime, endTime time.Time
 
 	rows := make([]string, 0)
-	values := make([]string, 0, len(obj.computerCounters))
+	values := make([]string, 0, len(obj.counters))
 	columns := []string{
 		"id", "active", "pid", "ppid",
 		"name", "commandLine", "exitCode",
@@ -151,8 +151,17 @@ func (obj *webReporter) setProcessActive(id, active string) {
 		argActive = false
 	}
 
-	update := obj.storage.Update("processInfo", "active", argActive)
-	update.SetFilter(fmt.Sprintf("id = %s", id))
-	update.Execute()
+	{
+		update := obj.storage.Update("processInfo", "active", argActive)
+		update.SetFilter(fmt.Sprintf("id = %s", id))
+		update.Execute()
+	}
+
+	{
+		update := obj.storage.Update("processCountersData", "active", true)
+		update.SetFilter("counter IN (SELECT id FROM processCounters WHERE active = TRUE)")
+		update.SetFilter("process IN (SELECT id FROM processInfo WHERE active = TRUE)")
+		update.Execute()
+	}
 
 }

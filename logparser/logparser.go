@@ -299,7 +299,7 @@ func (obj *logParser) saveProcesses() {
 
 	for _, info := range obj.processInfo {
 		obj.transfer.Send("processInfo",
-			info.getID(), false,
+			info.getID(),
 			info.computer, info.pid, info.ppid,
 			info.name, info.commandLine,
 			info.exitCode,

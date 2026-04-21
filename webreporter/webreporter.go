@@ -35,11 +35,11 @@ type webReporter struct {
 	templates *template.Template
 	logger    *log.Logger
 
-	details          rootDetails
-	filter           *dataFilter
-	mainMenu         *navigation
-	computerCounters map[int]string
-	processCounters  map[int]string
+	details         rootDetails
+	filter          *dataFilter
+	mainMenu        *navigation
+	counters        map[int]string
+	processCounters map[int]string
 
 	port int
 }
