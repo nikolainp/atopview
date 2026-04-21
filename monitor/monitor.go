@@ -48,7 +48,7 @@ func NewMonitor() Monitor {
 
 // Start ...
 func (obj *monitor) Start(ctx context.Context, fmtShowProgress string) {
-	obj.Stop()
+	//obj.Stop()
 
 	obj.ctx = ctx
 	obj.done = make(chan struct{})

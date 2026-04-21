@@ -66,18 +66,17 @@ func main() {
 		})
 
 		wg.Wait()
-		// monitor.Start("Save data: parts: %[1]d/%[2]d time: %[5]s")
+		monitor.Stop()
 
 		if ctx.Err() != nil {
 			return
 		}
 
-		monitor.WriteEvent("Start post processing\n")
+		monitor.Start(ctx, "Post processing: %[7]s")
 		if err := storage.FlushAll(conf.PathStorage); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			cancel()
 		}
-		monitor.WriteEvent("Finish post processing\n")
 		monitor.Stop()
 
 		storage.Close()
