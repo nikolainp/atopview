@@ -52,6 +52,7 @@ type dataField struct {
 	isSubName   bool
 	isScale     bool
 	isNeedScale bool
+	isProcess   bool
 
 	// TODO время на середину интервала для счетчиков cpu, disk, ...
 }
@@ -444,7 +445,8 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "filesystem gid"}},
 				{subField: subField{name: "elapsedTime", description: "elapsed time of terminated process (hertz)"},
 					isNote: true},
-				{subField: subField{name: "", description: "is_process (y/n)"}},
+				{subField: subField{name: "", description: "is_process (y/n)"},
+					isProcess: true},
 				{subField: subField{name: "", description: "OpenVZ virtual pid (VPID)"}},
 				{subField: subField{name: "", description: "OpenVZ container id (CTID)"}},
 				{subField: subField{name: "", description: "container/pod name (CID/POD)"}},
@@ -465,9 +467,12 @@ func getDataDescription() map[entryLabel]dataDescription {
 					isNote: true},
 				{subField: subField{name: "", description: "state"},
 					isNote: true},
-				{subField: subField{name: "", description: "total number of clock-ticks per second for this machine"}},
-				{subField: subField{name: "", description: "CPU-consumption in user mode (clockticks)"}},
-				{subField: subField{name: "", description: "CPU-consumption in system mode (clockticks)"}},
+				{subField: subField{name: "", description: "total number of clock-ticks per second for this machine"},
+					isScale: true},
+				{subField: subField{name: "CPU_user", description: "CPU-consumption in user mode (clockticks)"},
+					isNeedScale: true},
+				{subField: subField{name: "CPU_system", description: "CPU-consumption in system mode (clockticks)"},
+					isNeedScale: true},
 				{subField: subField{name: "", description: "nice value"}},
 				{subField: subField{name: "", description: "priority"}},
 				{subField: subField{name: "", description: "realtime priority"}},
@@ -475,16 +480,21 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "current CPU (-1 for exited process)"}},
 				{subField: subField{name: "", description: "sleep average"}},
 				{subField: subField{name: "", description: "TGID (group number of related tasks/threads)"}},
-				{subField: subField{name: "", description: "is_process (y/n)"}},
+				{subField: subField{name: "", description: "is_process (y/n)"},
+					isProcess: true},
 				{subField: subField{name: "", description: "runqueue delay in nanoseconds for this thread or for all threads (in case of process)"}},
 				{subField: subField{name: "", description: "wait channel of this thread (between parenthesis or underscores for spaces)"}},
-				{subField: subField{name: "", description: "block I/O delay (clockticks)"}},
+				{subField: subField{name: "blockIO", description: "block I/O delay (clockticks)"},
+					isNeedScale: true},
 				{subField: subField{name: "", description: "cgroup v2 'cpu.max' calculated as  percentage  (-3  means  no cgroup v2 support, -2 means undefined and -1 means maximum)"}},
 				{subField: subField{name: "", description: "cgroup v2 most restrictive 'cpu.max' in upper directories calculated as percentage (-3 means no cgroup v2 support, -2 means undefined and -1 means maximum)"}},
-				{subField: subField{name: "", description: "number of voluntary context switches"}},
-				{subField: subField{name: "", description: "number of involuntary context switches"}},
+				{subField: subField{name: "contextSwitch", description: "number of voluntary context switches"}},
+				{subField: subField{name: "inContextSwitch", description: "number of involuntary context switches"}},
 			},
 			subName: pidList.getProcessPid,
+			scale: func(value float64, intetrval int64, scale float64) float64 {
+				return 100 * value / (float64(intetrval) * scale)
+			},
 		},
 		labelPRE: {
 			label: "Process(GPU)", isSystem: false,
@@ -505,25 +515,30 @@ func getDataDescription() map[entryLabel]dataDescription {
 		labelPRM: {
 			label: "Process(Memory)", isSystem: false,
 			fields: []dataField{
-				{subField: subField{name: "", description: "PID"}},
-				{subField: subField{name: "", description: "name (between parenthesis or underscores for spaces)"}},
-				{subField: subField{name: "", description: "state"}},
-				{subField: subField{name: "", description: "page size for this machine (in bytes)"}},
-				{subField: subField{name: "", description: "virtual  memory  size  (KiB)"}},
-				{subField: subField{name: "", description: "resident memory  size  (KiB)"}},
-				{subField: subField{name: "", description: "shared  text  memory size (KiB)"}},
-				{subField: subField{name: "", description: "virtual memory growth (KiB)"}},
-				{subField: subField{name: "", description: "resident memory growth (KiB)"}},
-				{subField: subField{name: "", description: "number of minor page faults"}},
-				{subField: subField{name: "", description: "number of major page faults"}},
-				{subField: subField{name: "", description: "virtual library exec size (KiB)"}},
-				{subField: subField{name: "", description: "virtual data size (KiB)"}},
-				{subField: subField{name: "", description: "virtual stack size (KiB)"}},
-				{subField: subField{name: "", description: "swap space used (KiB)"}},
+				{subField: subField{name: "", description: "PID"},
+					isNote: true},
+				{subField: subField{name: "", description: "name (between parenthesis or underscores for spaces)"},
+					isNote: true},
+				{subField: subField{name: "", description: "state"},
+					isNote: true},
+				{subField: subField{name: "", description: "page size for this machine (in bytes)"},
+					isScale: true},
+				{subField: subField{name: "virtual", description: "virtual  memory  size  (KiB)"}},
+				{subField: subField{name: "resident", description: "resident memory  size  (KiB)"}},
+				{subField: subField{name: "shared", description: "shared  text  memory size (KiB)"}},
+				{subField: subField{name: "virtualGrowth", description: "virtual memory growth (KiB)"}},
+				{subField: subField{name: "residentGrowth", description: "resident memory growth (KiB)"}},
+				{subField: subField{name: "minorFaults", description: "number of minor page faults"}},
+				{subField: subField{name: "majorFaults", description: "number of major page faults"}},
+				{subField: subField{name: "virtualLibrary", description: "virtual library exec size (KiB)"}},
+				{subField: subField{name: "virtualData", description: "virtual data size (KiB)"}},
+				{subField: subField{name: "virtualStach", description: "virtual stack size (KiB)"}},
+				{subField: subField{name: "swap", description: "swap space used (KiB)"}},
 				{subField: subField{name: "", description: "TGID (group number of related tasks/threads)"}},
-				{subField: subField{name: "", description: "is_process (y/n)"}},
+				{subField: subField{name: "", description: "is_process (y/n)"},
+					isProcess: true},
 				{subField: subField{name: "", description: "proportional set size (KiB) if in 'R' option is specified"}},
-				{subField: subField{name: "", description: "virtually locked memory space (KiB)"}},
+				{subField: subField{name: "locked", description: "virtually locked memory space (KiB)"}},
 				{subField: subField{name: "", description: "cgroup v2 'memory.max' in KiB (-3 means no cgroup v2  support, -2 means undefined and -1 means maximum)"}},
 				{subField: subField{name: "", description: "cgroup v2 most restrictive 'memory.max' in upper directories in KiB (-3 means no cgroup v2 support, -2 means undefined and -1 means maximum)"}},
 				{subField: subField{name: "", description: "cgroup v2 'memory.swap.max' in KiB (-3 means no cgroup v2 support, -2 means undefined and -1 means maximum)"}},
@@ -545,7 +560,8 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "cancelled number of written  sectors"}},
 				{subField: subField{name: "", description: "TGID (group number of related tasks/threads)"}},
 				{subField: subField{name: "", description: "obsoleted value ('n')"}},
-				{subField: subField{name: "", description: "is_process (y/n)"}},
+				{subField: subField{name: "", description: "is_process (y/n)"},
+					isProcess: true},
 			},
 			subName: pidList.getProcessPid,
 		},
@@ -567,7 +583,8 @@ func getDataDescription() map[entryLabel]dataDescription {
 				{subField: subField{name: "", description: "number of raw packets transmitted (obsolete, always 0)"}},
 				{subField: subField{name: "", description: "number of raw packets received (obsolete, always 0)"}},
 				{subField: subField{name: "", description: "TGID (group number of related tasks/threads)"}},
-				{subField: subField{name: "", description: "is_process (y/n)"}},
+				{subField: subField{name: "", description: "is_process (y/n)"},
+					isProcess: true},
 			},
 			subName: pidList.getProcessPid,
 		},
@@ -611,6 +628,25 @@ func (obj *dataDescription) getSubName(data dataEntry) string {
 	}
 
 	return ""
+}
+
+func (obj *dataDescription) isProcess(data dataEntry) bool {
+
+	length := min(len(data.points), len(obj.fields))
+	for i := 0; i < length; i++ {
+		if obj.fields[i].isProcess {
+			switch string(data.points[i]) {
+			case "y":
+				return true
+			case "n":
+				return false
+			default:
+				panic("undefined")
+			}
+		}
+	}
+
+	return true
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -704,9 +740,13 @@ func (obj *pidList) getProgrammPid(entry dataEntry) string {
 	//  9 - start time (epoch)
 	// 26 - "indication if the task is newly started during this interval ('N')"
 	pid := string(entry.points[0])
+	state := string(entry.points[2])
 	startTime := string(entry.points[8])
 
 	if oldStartTime, ok := obj.data[pid]; ok {
+		if state == "E" {
+			startTime = oldStartTime
+		}
 		if startTime != oldStartTime {
 			obj.data[pid] = startTime
 		}
@@ -722,7 +762,8 @@ func (obj *pidList) getProcessPid(entry dataEntry) string {
 	if startTime, ok := obj.data[pid]; ok {
 		return fmt.Sprintf("%s_%s", pid, startTime)
 	}
-	obj.data[pid] = ""
+	panic("no pid: " + pid)
+	// obj.data[pid] = ""
 
 	return fmt.Sprintf("%s_0", pid)
 }

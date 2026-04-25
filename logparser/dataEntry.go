@@ -70,21 +70,9 @@ func newEntry(buf []byte) (res dataEntry, err error) {
 	}
 
 	switch res.label {
-	case labelPSI:
-		if string(res.points[0]) != "y" {
-			res.label = labelNONE
-		}
 	case labelNET1:
 		if string(res.points[0]) != "upper" {
 			res.label = labelNET2
-		}
-	case labelPRG:
-		if string(res.points[21]) != "y" {
-			res.label = labelNONE
-		}
-	case labelPRC:
-		if string(res.points[13]) != "y" {
-			res.label = labelNONE
 		}
 	}
 

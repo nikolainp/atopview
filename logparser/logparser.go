@@ -248,6 +248,11 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 		return err
 	}
 
+	// TODO потоки процессов
+	if !desc.isSystem && !desc.isProcess(data) {
+		return nil
+	}
+
 	for _, counter := range counters {
 
 		id := obj.getCounterID(desc, computer, counter.key, subName)
@@ -266,7 +271,6 @@ func (obj *logParser) saveRecord(data dataEntry) error {
 	}
 
 	// TODO детали загрузки
-	// TODO параметры процесса
 	// TODO счётчики по всем процессам - число зомби, число процессов этого типа, ждущих процессов,новых/старых/завершившихся
 
 	return nil
